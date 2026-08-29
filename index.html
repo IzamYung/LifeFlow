@@ -19,6 +19,9 @@
     <link rel="stylesheet" href="css/schedule.css">
     <link rel="stylesheet" href="css/assignment.css">
     <link rel="stylesheet" href="css/settings.css">
+    <!-- PWA Manifest & Icons -->
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="logo.png">
 </head>
 <body data-theme="dark">
 <script>
@@ -45,10 +48,10 @@
             </div>
 
             <!-- Single Login Form: No signup, just profile name verification -->
-            <form id="form-auth-login" class="auth-panel active">
+            <form id="form-auth-login" class="auth-panel active" onsubmit="event.preventDefault();">
                 <div class="input-group">
                     <label for="login-username">Profile Name</label>
-                    <input type="text" id="login-username" name="username" placeholder="e.g. Alex Mercer" required>
+                    <input type="text" id="login-username" name="username" placeholder="Enter profile name" autocomplete="off" required>
                 </div>
                 <button type="submit" class="auth-submit-btn">Access Dashboard</button>
             </form>

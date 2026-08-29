@@ -307,11 +307,15 @@ const PrayerPage = {
             `;
         }).join('');
 
-        // Auto schedule today's future prayers in local notification database
-        this.schedulePrayerNotifications(dayData);
+        // Pre-schedule next 7 days of prayer notifications
+        const cacheKey = `${this.selectedZone}-${this.selectedDate.getFullYear()}-${this.selectedDate.getMonth() + 1}`;
+        const monthTimes = this.cache[cacheKey];
+        if (monthTimes) {
+            this.scheduleWeekPrayerNotifications(monthTimes);
+        }
     },
 
-    async schedulePrayerNotifications(dayData) {
+    async scheduleWeekPrayerNotifications(monthTimes) {
         const prayersToNotify = [
             { key: 'fajr', label: 'Fajr' },
             { key: 'dhuhr', label: 'Dhuhr' },
@@ -321,20 +325,34 @@ const PrayerPage = {
         ];
 
         const nowMS = Date.now();
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
 
-        for (const p of prayersToNotify) {
-            const rawTimestamp = dayData[p.key]; // Unix timestamp in seconds
-            if (!rawTimestamp) continue;
+        // Collect the next 7 days (today + 6 more)
+        const targetDays = [];
+        for (let i = 0; i < 7; i++) {
+            const d = new Date(today);
+            d.setDate(today.getDate() + i);
+            targetDays.push(d.getDate()); // day-of-month numbers
+        }
 
-            const triggerTimeMS = rawTimestamp * 1000;
-            // Only schedule if it's in the future
-            if (triggerTimeMS > nowMS) {
+        // Filter month data to only those 7 days
+        const weekData = monthTimes.filter(t => targetDays.includes(t.day));
+
+        for (const dayData of weekData) {
+            for (const p of prayersToNotify) {
+                const rawTimestamp = dayData[p.key]; // Unix timestamp in seconds
+                if (!rawTimestamp) continue;
+
+                const triggerTimeMS = rawTimestamp * 1000;
+                if (triggerTimeMS <= nowMS) continue; // Skip past prayers
+
                 const trigDate = new Date(triggerTimeMS);
                 trigDate.setMinutes(trigDate.getMinutes() - trigDate.getTimezoneOffset());
                 const notifTimeStr = trigDate.toISOString().replace('T', ' ').slice(0, 19);
 
                 try {
-                    // Check duplicate
+                    // Skip if already scheduled (avoid duplicates)
                     const exist = await API.query(
                         "SELECT id FROM notifications WHERE type = 'prayer' AND scheduled_time = ?",
                         [notifTimeStr]

@@ -42,8 +42,8 @@ const SettingsPage = {
                                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
                                     </div>
                                     <div class="settings-label">
-                                        <span class="settings-title">Local Notifications</span>
-                                        <span class="settings-subtitle">Remind me of upcoming classes and task deadlines.</span>
+                                        <span class="settings-title">Background Notifications</span>
+                                        <span class="settings-subtitle">Prayer times & task reminders — even when app is closed.</span>
                                     </div>
                                 </div>
                                 <label class="switch">
@@ -54,10 +54,31 @@ const SettingsPage = {
                         </div>
                     </div>
 
+                    <!-- PWA Install App Group -->
+                    <div class="settings-group" id="pwa-install-group">
+                        <div class="settings-group-title">Progressive Web App</div>
+                        <div class="settings-list">
+                            <div class="settings-item" style="flex-direction:column; align-items:flex-start; gap:12px; padding:16px;">
+                                <div class="settings-item-left" style="width:100%;">
+                                    <div class="settings-icon-box" style="background:var(--primary-light);">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+                                    </div>
+                                    <div class="settings-label" style="flex:1;">
+                                        <span class="settings-title">Install Lifeflow App</span>
+                                        <span class="settings-subtitle" id="pwa-status-text">Install to home screen for offline access & background notifications.</span>
+                                    </div>
+                                </div>
+                                <button id="btn-pwa-install" class="btn btn-primary" style="width:100%; font-weight:700; padding:12px;">
+                                    📲 Install App to Home Screen
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- 2. Profile Details Form Card -->
                     <div class="settings-group">
                         <div class="settings-group-title">Student Profile</div>
-                        <div class="card">
+                        <div class="card" style="padding: 16px;">
                             <form id="form-profile-settings" class="settings-form">
                                 <div class="form-group">
                                     <label for="sett-profile-name">Full Name</label>
@@ -235,15 +256,67 @@ const SettingsPage = {
                     const permission = await Notification.requestPermission();
                     if (permission !== 'granted') {
                         notifSwitch.checked = false;
-                        alert('Notifications permissions were denied.');
+                        alert('Notifications permissions were denied. Please enable them in your browser settings.');
                         return;
                     }
                 }
 
                 try {
                     await API.execute("INSERT OR REPLACE INTO settings (key_name, value_val) VALUES ('notifications_enabled', ?)", [isEnabled]);
+
+                    // If enabled, try to register Periodic Background Sync for background alerts
+                    if (e.target.checked && 'serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1')) {
+                        const reg = await navigator.serviceWorker.ready;
+                        if ('periodicSync' in reg) {
+                            try {
+                                const status = await navigator.permissions.query({ name: 'periodic-background-sync' });
+                                if (status.state === 'granted') {
+                                    await reg.periodicSync.register('check-notifications', {
+                                        minInterval: 5 * 60 * 1000 // every 5 minutes
+                                    });
+                                    console.log('Background Sync registered for prayer alerts.');
+                                }
+                            } catch (syncErr) {
+                                console.warn('Periodic background sync registration failed:', syncErr);
+                            }
+                        }
+                    }
                 } catch (err) {
                     console.error('Failed to save notification preferences: ' + err.message);
+                }
+            });
+        }
+
+        // PWA Install Prompt Handler
+        const btnInstall = document.getElementById('btn-pwa-install');
+        const statusText = document.getElementById('pwa-status-text');
+        const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+
+        if (isStandalone) {
+            if (btnInstall) {
+                btnInstall.disabled = true;
+                btnInstall.textContent = '✅ App Installed (Standalone Mode)';
+                btnInstall.style.backgroundColor = 'var(--success)';
+                btnInstall.style.color = '#ffffff';
+                btnInstall.style.opacity = '0.9';
+                btnInstall.style.cursor = 'default';
+            }
+            if (statusText) {
+                statusText.textContent = 'Lifeflow is currently running as an installed standalone app.';
+            }
+        } else if (btnInstall) {
+            btnInstall.addEventListener('click', async () => {
+                if (window.deferredInstallPrompt) {
+                    window.deferredInstallPrompt.prompt();
+                    const { outcome } = await window.deferredInstallPrompt.userChoice;
+                    if (outcome === 'accepted') {
+                        btnInstall.disabled = true;
+                        btnInstall.textContent = '✅ Installed Successfully!';
+                        btnInstall.style.backgroundColor = 'var(--success)';
+                        window.deferredInstallPrompt = null;
+                    }
+                } else {
+                    alert('📌 Cara Install Lifeflow ke Home Screen:\n\n📱 Android (Chrome):\n1. Tekan butang menu 3-titik (⋮) di atas kanan browser\n2. Tekan "Install app" atau "Add to Home screen"\n\n🍎 iPhone (Safari):\n1. Tekan butang Share (ikon kotak & anak panah atas)\n2. Skrol ke bawah & tekan "Add to Home Screen"\n\n💻 PC (Chrome/Edge):\n1. Tekan ikon install di hujung kanan ruang URL (Address bar).');
                 }
             });
         }

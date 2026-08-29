@@ -1,5 +1,4 @@
-/* C:\Users\razn\.gemini\antigravity\scratch\lifeflow\js\app.js */
-
+// Global PWA install prompt handler
 // Global App Coordinator for UniFlow
 const App = {
     currentRoute: '',
@@ -15,18 +14,58 @@ const App = {
         'vault': VaultPage
     },
 
+    registerServiceWorker() {
+        if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1')) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                    .then((reg) => {
+                        console.log('Service Worker registered with scope:', reg.scope);
+                        
+                        // Register Periodic Background Sync if supported
+                        if ('periodicSync' in reg) {
+                            navigator.permissions.query({ name: 'periodic-background-sync' }).then((status) => {
+                                if (status.state === 'granted') {
+                                    reg.periodicSync.register('check-notifications', {
+                                        minInterval: 5 * 60 * 1000 // 5 minutes
+                                    }).catch(err => console.warn('Periodic Sync registration failed:', err));
+                                }
+                            });
+                        }
+                    })
+                    .catch((err) => {
+                        console.error('Service Worker registration failed:', err);
+                    });
+            });
+        }
+    },
+
     async init() {
         this.initStatusClock();
+        this.registerServiceWorker();
+
+        // 1. Immediately bind Auth UI listeners to prevent default form submits
+        this.initAuthUI();
+
+        // 2. Clean query params from URL if user submitted via browser GET
+        if (window.location.search) {
+            const urlParams = new URLSearchParams(window.location.search);
+            const userParam = urlParams.get('username');
+            if (userParam) {
+                const userInput = document.getElementById('login-username');
+                if (userInput) userInput.value = userParam;
+            }
+            if (window.history && window.history.replaceState) {
+                const cleanUrl = window.location.pathname + window.location.hash;
+                window.history.replaceState({}, document.title, cleanUrl);
+            }
+        }
 
         try {
-            // 1. Auto-seed default database records on startup (wallets, settings, categories)
-            await API.checkAndSeedDatabase();
-            
-            // 2. Initialize Login form submission hook
-            this.initAuthUI();
-            
             // 3. Check for active login session
             await this.checkAuth();
+
+            // 4. Auto-seed default database records on startup in background
+            await API.checkAndSeedDatabase();
         } catch (e) {
             console.error("Initialization failed:", e);
         }
@@ -67,10 +106,19 @@ const App = {
 
     initAuthUI() {
         const panelLogin = document.getElementById('form-auth-login');
+        if (!panelLogin || panelLogin.dataset.bound) return;
+        panelLogin.dataset.bound = 'true';
 
         // Submit Login Form
         panelLogin.addEventListener('submit', async (e) => {
             e.preventDefault();
+            const submitBtn = panelLogin.querySelector('button[type="submit"]');
+            const originalBtnText = submitBtn ? submitBtn.textContent : '';
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.textContent = 'Verifying...';
+            }
+
             const inputName = document.getElementById('login-username').value.trim().toLowerCase();
 
             try {
@@ -78,12 +126,19 @@ const App = {
                 const nameDb = await API.query("SELECT value_val FROM settings WHERE key_name = 'user_name'");
                 const univDb = await API.query("SELECT value_val FROM settings WHERE key_name = 'user_university'");
                 
-                const regName = nameDb[0] ? nameDb[0].value_val.trim().toLowerCase() : 'alex mercer';
+                const realName = nameDb[0] ? nameDb[0].value_val.trim() : '';
+                const regName = realName.toLowerCase();
+                const realUniv = univDb[0] ? univDb[0].value_val.trim() : '';
 
-                if (inputName === regName) {
+                // Allow exact match or first-name match
+                const isMatch = regName && ((inputName === regName) || 
+                                (regName.split(' ')[0] === inputName) || 
+                                (regName.includes(inputName) && inputName.length >= 3));
+
+                if (isMatch) {
                     const session = {
-                        name: nameDb[0] ? nameDb[0].value_val : 'Alex Mercer',
-                        university: univDb[0] ? univDb[0].value_val : 'Pacific Tech University'
+                        name: realName,
+                        university: realUniv
                     };
 
                     // Save session into localStorage (No expiration timer)
@@ -91,10 +146,15 @@ const App = {
                     panelLogin.reset();
                     await this.checkAuth();
                 } else {
-                    alert('Profile name not found. Access denied.');
+                    alert('Profile name not recognized. Access denied.');
                 }
             } catch (err) {
                 alert('Database communication error: ' + err.message);
+            } finally {
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = originalBtnText;
+                }
             }
         });
     },
@@ -311,10 +371,23 @@ const App = {
 
     triggerSystemNotification(title, body) {
         if (Notification.permission === 'granted') {
-            try {
-                new Notification(title, { body: body });
-            } catch (e) {
-                console.warn('HTML5 Notification error: ', e);
+            if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+                navigator.serviceWorker.ready.then((reg) => {
+                    reg.showNotification(title, {
+                        body: body,
+                        icon: './logo.png',
+                        badge: './logo.png',
+                        vibrate: [100, 50, 100]
+                    });
+                }).catch((e) => {
+                    new Notification(title, { body: body });
+                });
+            } else {
+                try {
+                    new Notification(title, { body: body });
+                } catch (e) {
+                    console.warn('HTML5 Notification error: ', e);
+                }
             }
         }
 
