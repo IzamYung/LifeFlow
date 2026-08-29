@@ -5,6 +5,9 @@ const QiblaPage = {
     userLocation: null,
     currentHeading: 0,
     permissionRequested: false,
+    sensorTimeout: null,
+    dialRotation: 0,
+    arrowRotation: 0,
 
     // Static coordinate lookup for Malaysian zones as a fallback
     zoneCoords: {
@@ -97,6 +100,9 @@ const QiblaPage = {
             const page = document.getElementById('qibla-page');
             if (page) page.classList.add('active');
         }, 50);
+
+        this.dialRotation = 0;
+        this.arrowRotation = 0;
 
         // 1. Calculate Qibla Bearing (GPS or Zone Fallback)
         await this.initLocationAndBearing();
@@ -198,34 +204,67 @@ const QiblaPage = {
         }
     },
 
+    getShortestRotation(targetAngle, currentRotation) {
+        let diff = targetAngle - currentRotation;
+        // Normalize diff to [-180, 180]
+        diff = ((diff + 180) % 360 + 360) % 360 - 180;
+        return currentRotation + diff;
+    },
+
     bindOrientationEvents() {
+        // Clear any existing sensor timeout
+        if (this.sensorTimeout) {
+            clearTimeout(this.sensorTimeout);
+            this.sensorTimeout = null;
+        }
+
+        const handleAbsoluteOrientation = (event) => {
+            if (event.alpha !== null) {
+                const heading = (360 - event.alpha) % 360;
+                this.updateCompass(heading);
+            }
+        };
+
         const handleOrientation = (event) => {
             let heading = null;
-
-            if (event.webkitCompassHeading) {
-                // iOS native compass heading (degrees clockwise from magnetic North)
+            if (event.webkitCompassHeading !== undefined && event.webkitCompassHeading !== null) {
+                // iOS native compass heading
                 heading = event.webkitCompassHeading;
-            } else if (event.alpha !== null) {
-                // Android/General compass heading
-                heading = 360 - event.alpha;
+            } else if (event.alpha !== null && event.absolute === true) {
+                // Android absolute fallback inside deviceorientation
+                heading = (360 - event.alpha) % 360;
             }
 
             if (heading !== null) {
                 this.updateCompass(heading);
-            } else {
-                this.showDesktopCompassWarning();
             }
         };
 
-        // Listen for absolute coordinates on Android, fallback to standard orientation
-        window.addEventListener('deviceorientationabsolute', handleOrientation, true);
-        window.addEventListener('deviceorientation', handleOrientation, true);
+        const useAbsolute = 'ondeviceorientationabsolute' in window;
+
+        if (useAbsolute) {
+            window.addEventListener('deviceorientationabsolute', handleAbsoluteOrientation, true);
+        } else {
+            window.addEventListener('deviceorientation', handleOrientation, true);
+        }
+
+        // Set timeout to show desktop fallback warning if no sensor event updates the compass in 2 seconds
+        this.sensorTimeout = setTimeout(() => {
+            this.showDesktopCompassWarning();
+        }, 2000);
 
         // Keep a cleanup hook when routes change
         const checkRouteCleanup = () => {
             if (window.location.hash !== '#/qibla') {
-                window.removeEventListener('deviceorientationabsolute', handleOrientation, true);
-                window.removeEventListener('deviceorientation', handleOrientation, true);
+                if (useAbsolute) {
+                    window.removeEventListener('deviceorientationabsolute', handleAbsoluteOrientation, true);
+                } else {
+                    window.removeEventListener('deviceorientation', handleOrientation, true);
+                }
+                if (this.sensorTimeout) {
+                    clearTimeout(this.sensorTimeout);
+                    this.sensorTimeout = null;
+                }
                 window.removeEventListener('hashchange', checkRouteCleanup);
             }
         };
@@ -233,6 +272,11 @@ const QiblaPage = {
     },
 
     updateCompass(heading) {
+        if (this.sensorTimeout) {
+            clearTimeout(this.sensorTimeout);
+            this.sensorTimeout = null;
+        }
+
         this.currentHeading = heading;
 
         const dial = document.getElementById('qibla-compass-dial');
@@ -242,16 +286,21 @@ const QiblaPage = {
 
         if (!dial || !arrow) return;
 
-        // 1. Rotate dial opposite to device heading
-        dial.style.transform = `rotate(${-heading}deg)`;
+        // 1. Calculate target rotations
+        const targetDialRotation = -heading;
+        const targetArrowRotation = this.qiblaBearing - heading;
 
-        // 2. Rotate Kaaba arrow container to point at the Kaaba
-        const arrowRotation = this.qiblaBearing - heading;
-        arrow.style.transform = `rotate(${arrowRotation}deg)`;
+        // 2. Get shortest path accumulated rotations to prevent the 360 -> 0 degree spinning jump
+        this.dialRotation = this.getShortestRotation(targetDialRotation, this.dialRotation);
+        this.arrowRotation = this.getShortestRotation(targetArrowRotation, this.arrowRotation);
+
+        // 3. Rotate dial and arrow container using accumulated rotations
+        dial.style.transform = `rotate(${this.dialRotation}deg)`;
+        arrow.style.transform = `rotate(${this.arrowRotation}deg)`;
 
         if (lblHeading) lblHeading.textContent = `${Math.round(heading)}°`;
 
-        // 3. Check alignment (tolerance within 5 degrees)
+        // 4. Check alignment (tolerance within 5 degrees)
         const angleDiff = Math.abs(heading - this.qiblaBearing);
         const isAligned = angleDiff <= 5 || angleDiff >= 355;
 
@@ -272,6 +321,11 @@ const QiblaPage = {
     },
 
     showDesktopCompassWarning() {
+        if (this.sensorTimeout) {
+            clearTimeout(this.sensorTimeout);
+            this.sensorTimeout = null;
+        }
+
         const statusText = document.getElementById('qibla-status-text');
         if (statusText) {
             statusText.innerHTML = `
@@ -281,12 +335,14 @@ const QiblaPage = {
             `;
         }
 
-        // Set static dial (North is UP)
+        // Set static dial smoothly (North is UP)
         const dial = document.getElementById('qibla-compass-dial');
         const arrow = document.getElementById('qibla-arrow-container');
         if (dial && arrow) {
-            dial.style.transform = 'rotate(0deg)';
-            arrow.style.transform = `rotate(${this.qiblaBearing}deg)`;
+            this.dialRotation = this.getShortestRotation(0, this.dialRotation);
+            this.arrowRotation = this.getShortestRotation(this.qiblaBearing, this.arrowRotation);
+            dial.style.transform = `rotate(${this.dialRotation}deg)`;
+            arrow.style.transform = `rotate(${this.arrowRotation}deg)`;
         }
     }
 };
