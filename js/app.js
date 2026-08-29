@@ -87,9 +87,10 @@ const App = {
                 loginScreen.style.display = 'none';
                 appContainer.style.display = 'flex';
 
-                // Initialize SPA routers, FAB, and alerts polling
+                // Initialize SPA routers, FAB, alerts polling, and pull-to-refresh
                 this.initRouting();
                 this.initFAB();
+                this.initPullToRefresh();
                 await this.initThemeAndPermissions();
                 this.initNotificationPolling();
                 
@@ -244,6 +245,133 @@ const App = {
                 const target = item.dataset.page;
                 window.location.hash = `#/${target}`;
             };
+        });
+    },
+
+    // -------------------------------------------------------------------------
+    // 2.1 RELOAD & REFRESH LOGIC (Pull-to-refresh & Header Button)
+    // -------------------------------------------------------------------------
+    async reloadPage() {
+        if (!this.session) return;
+        const currentHash = this.currentRoute || 'dashboard';
+
+        try {
+            // Re-sync local cache from Turso cloud
+            await API.forceSync();
+        } catch (e) {
+            console.warn("API forceSync on reload:", e);
+        }
+
+        // Re-render current active page route
+        const viewport = document.getElementById('main-viewport');
+        if (viewport && this.routes[currentHash]) {
+            API.showSkeletons('#main-viewport', 2);
+            try {
+                await this.routes[currentHash].render(viewport);
+            } catch (err) {
+                console.error("Page render failed on reload:", err);
+            }
+        }
+    },
+
+    initPullToRefresh() {
+        const viewport = document.getElementById('main-viewport');
+        const ptrIndicator = document.getElementById('pull-to-refresh');
+        if (!viewport || !ptrIndicator || viewport.dataset.ptrBound) return;
+        viewport.dataset.ptrBound = 'true';
+
+        const ptrIcon = ptrIndicator.querySelector('svg');
+        let startY = 0;
+        let currentY = 0;
+        let isPulling = false;
+        let isRefreshing = false;
+
+        const isModalOrSheetActive = () => {
+            const overlay = document.getElementById('global-modal-overlay');
+            const sheet = document.getElementById('global-bottom-sheet');
+            return (overlay && overlay.classList.contains('active')) ||
+                   (sheet && sheet.classList.contains('active')) ||
+                   document.querySelector('.modal-overlay.active, .bottom-sheet.active');
+        };
+
+        viewport.addEventListener('touchstart', (e) => {
+            if (isRefreshing) return;
+
+            // Strict check: if any modal/popup/sheet is active, completely ignore gesture
+            if (isModalOrSheetActive()) {
+                isPulling = false;
+                return;
+            }
+
+            // Only trigger if scrolled to the very top
+            if (viewport.scrollTop <= 0 && e.touches.length === 1) {
+                startY = e.touches[0].clientY;
+                isPulling = true;
+                ptrIndicator.style.transition = 'none';
+            }
+        }, { passive: true });
+
+        viewport.addEventListener('touchmove', (e) => {
+            if (!isPulling || isRefreshing) return;
+
+            // If modal became active during move, cancel immediately
+            if (isModalOrSheetActive()) {
+                isPulling = false;
+                ptrIndicator.style.transform = 'translateX(-50%) translateY(-65px)';
+                ptrIndicator.classList.remove('active');
+                return;
+            }
+
+            currentY = e.touches[0].clientY;
+            const diffY = currentY - startY;
+
+            if (diffY > 0 && viewport.scrollTop <= 0) {
+                // Apply soft resistance curve
+                const pullDistance = Math.min(diffY * 0.42, 75);
+                const rotation = Math.min(diffY * 2.2, 360);
+
+                ptrIndicator.classList.add('active');
+                ptrIndicator.style.transform = `translateX(-50%) translateY(${pullDistance - 55}px)`;
+                if (ptrIcon) {
+                    ptrIcon.style.transform = `rotate(${rotation}deg)`;
+                }
+            } else {
+                ptrIndicator.classList.remove('active');
+                ptrIndicator.style.transform = 'translateX(-50%) translateY(-65px)';
+            }
+        }, { passive: true });
+
+        viewport.addEventListener('touchend', async () => {
+            if (!isPulling || isRefreshing) return;
+            isPulling = false;
+
+            const diffY = currentY - startY;
+            const pullDistance = Math.min(diffY * 0.42, 75);
+
+            if (pullDistance >= 40 && viewport.scrollTop <= 0 && !isModalOrSheetActive()) {
+                isRefreshing = true;
+                ptrIndicator.style.transition = 'transform 0.25s ease, opacity 0.25s ease';
+                ptrIndicator.classList.add('refreshing');
+
+                try {
+                    await this.reloadPage();
+                } finally {
+                    setTimeout(() => {
+                        ptrIndicator.classList.remove('refreshing', 'active');
+                        ptrIndicator.style.transform = 'translateX(-50%) translateY(-65px)';
+                        if (ptrIcon) ptrIcon.style.transform = 'rotate(0deg)';
+                        isRefreshing = false;
+                    }, 400);
+                }
+            } else {
+                ptrIndicator.style.transition = 'transform 0.25s ease, opacity 0.25s ease';
+                ptrIndicator.classList.remove('active');
+                ptrIndicator.style.transform = 'translateX(-50%) translateY(-65px)';
+                if (ptrIcon) ptrIcon.style.transform = 'rotate(0deg)';
+            }
+
+            startY = 0;
+            currentY = 0;
         });
     },
 
