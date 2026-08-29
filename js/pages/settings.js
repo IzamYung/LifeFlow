@@ -316,7 +316,7 @@ const SettingsPage = {
                         window.deferredInstallPrompt = null;
                     }
                 } else {
-                    alert('📌 Cara Install Lifeflow ke Home Screen:\n\n📱 Android (Chrome):\n1. Tekan butang menu 3-titik (⋮) di atas kanan browser\n2. Tekan "Install app" atau "Add to Home screen"\n\n🍎 iPhone (Safari):\n1. Tekan butang Share (ikon kotak & anak panah atas)\n2. Skrol ke bawah & tekan "Add to Home Screen"\n\n💻 PC (Chrome/Edge):\n1. Tekan ikon install di hujung kanan ruang URL (Address bar).');
+                    alert('📌 How to Install Lifeflow to Home Screen:\n\n📱 Android (Chrome):\n1. Tap the 3-dot menu (⋮) in the top-right corner\n2. Tap "Install app" or "Add to Home screen"\n\n🍎 iPhone (Safari):\n1. Tap the Share button (square icon with arrow up)\n2. Scroll down & tap "Add to Home Screen"\n\n💻 PC (Chrome / Edge):\n1. Click the Install icon on the right side of the address bar (URL bar).');
                 }
             });
         }
