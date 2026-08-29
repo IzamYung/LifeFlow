@@ -305,7 +305,10 @@ const SettingsPage = {
                 statusText.textContent = 'Lifeflow is currently running as an installed standalone app.';
             }
         } else if (btnInstall) {
-            btnInstall.addEventListener('click', async () => {
+            btnInstall.onclick = async (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+
                 if (window.deferredInstallPrompt) {
                     window.deferredInstallPrompt.prompt();
                     const { outcome } = await window.deferredInstallPrompt.userChoice;
@@ -316,9 +319,42 @@ const SettingsPage = {
                         window.deferredInstallPrompt = null;
                     }
                 } else {
-                    alert('📌 How to Install Lifeflow to Home Screen:\n\n📱 Android (Chrome):\n1. Tap the 3-dot menu (⋮) in the top-right corner\n2. Tap "Install app" or "Add to Home screen"\n\n🍎 iPhone (Safari):\n1. Tap the Share button (square icon with arrow up)\n2. Scroll down & tap "Add to Home Screen"\n\n💻 PC (Chrome / Edge):\n1. Click the Install icon on the right side of the address bar (URL bar).');
+                    // Show in-app bottom sheet guide instead of blocking alert
+                    const guideHtml = `
+                        <div style="display:flex; flex-direction:column; gap:14px; padding:4px 0 16px 0;">
+                            <p style="font-size:13px; color:var(--text-secondary); margin:0;">
+                                Install Lifeflow to your device home screen for quick offline access and background notifications:
+                            </p>
+                            
+                            <div style="background:var(--surface-variant); border-radius:var(--radius-md); padding:14px; border:1px solid var(--border-color);">
+                                <div style="font-weight:700; font-size:14px; margin-bottom:6px; color:var(--text-primary);">📱 Android (Google Chrome)</div>
+                                <div style="font-size:13px; color:var(--text-secondary); line-height:1.5;">
+                                    1. Tap the <strong>three-dots menu (⋮)</strong> at the top right.<br>
+                                    2. Select <strong>"Install app"</strong> or <strong>"Add to Home screen"</strong>.
+                                </div>
+                            </div>
+                            
+                            <div style="background:var(--surface-variant); border-radius:var(--radius-md); padding:14px; border:1px solid var(--border-color);">
+                                <div style="font-weight:700; font-size:14px; margin-bottom:6px; color:var(--text-primary);">🍎 iPhone / iPad (Safari)</div>
+                                <div style="font-size:13px; color:var(--text-secondary); line-height:1.5;">
+                                    1. Tap the <strong>Share button</strong> (square with arrow pointing up).<br>
+                                    2. Scroll down and tap <strong>"Add to Home Screen"</strong>.
+                                </div>
+                            </div>
+
+                            <div style="background:var(--surface-variant); border-radius:var(--radius-md); padding:14px; border:1px solid var(--border-color);">
+                                <div style="font-weight:700; font-size:14px; margin-bottom:6px; color:var(--text-primary);">💻 PC / Mac (Chrome & Edge)</div>
+                                <div style="font-size:13px; color:var(--text-secondary); line-height:1.5;">
+                                    Click the <strong>Install icon</strong> in the right corner of your browser's address bar.
+                                </div>
+                            </div>
+
+                            <button class="btn btn-primary" style="width:100%; margin-top:6px;" onclick="Modal.close()">Got it</button>
+                        </div>
+                    `;
+                    Modal.open('How to Install Lifeflow', guideHtml);
                 }
-            });
+            };
         }
 
         // Telegram API Credentials form submit
