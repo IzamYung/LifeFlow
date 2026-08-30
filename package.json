@@ -1,0 +1,10 @@
+{
+  "name": "lifeflow",
+  "version": "1.0.0",
+  "description": "Lifeflow Student Productivity PWA",
+  "main": "api/cron.js",
+  "dependencies": {
+    "web-push": "^3.6.7"
+  }
+}
+

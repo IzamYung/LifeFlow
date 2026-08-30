@@ -122,6 +122,10 @@ async function checkAndShowNotifications() {
                 await executeOnTurso(sqlUpdate, [parseInt(notif.id)]);
             }
         }
+
+        // Auto-cleanup: delete notifications with sent = 1 that are older than 14 days (2 weeks)
+        const sqlCleanup = "DELETE FROM notifications WHERE sent = 1 AND datetime(scheduled_time) < datetime(?, '-14 days')";
+        await executeOnTurso(sqlCleanup, [localTimeStr]);
     } catch (err) {
         console.error("Service worker background check error:", err);
     }
@@ -184,7 +188,7 @@ self.addEventListener('sync', (event) => {
     }
 });
 
-// Push API Event: Handle server push notifications (FCM or VAPID push services)
+// Push API Event: Handle server push notifications (Vercel Cron -> Web Push)
 self.addEventListener('push', (event) => {
     let data = { title: 'Lifeflow Alert', body: 'New update from Lifeflow!' };
     try {
@@ -198,17 +202,15 @@ self.addEventListener('push', (event) => {
     }
 
     const options = {
-        body: data.body,
+        body: data.body || '',
         icon: './logo.png',
         badge: './logo.png',
-        vibrate: [100, 50, 100]
+        vibrate: [100, 50, 100],
+        data: data.data || { url: './' }
     };
 
     event.waitUntil(
-        Promise.all([
-            self.registration.showNotification(data.title, options),
-            checkAndShowNotifications() // Sync any local pending alerts as well
-        ])
+        self.registration.showNotification(data.title || 'Lifeflow Notification', options)
     );
 });
 

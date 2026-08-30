@@ -333,6 +333,20 @@ const API = {
                 await this.execute("INSERT INTO settings (key_name, value_val) VALUES (?, ?)", ['prayer_zone', 'WLY01']);
             }
 
+            // Auto-cleanup: remove sent notifications older than 14 days (2 weeks)
+            await this.execute("DELETE FROM notifications WHERE sent = 1 AND datetime(scheduled_time) < datetime('now', '-14 days')");
+
+            // Ensure push_subscriptions table exists for Vercel Cron Web Push
+            await this.execute(`
+                CREATE TABLE IF NOT EXISTS push_subscriptions (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    endpoint TEXT UNIQUE NOT NULL,
+                    p256dh TEXT NOT NULL,
+                    auth TEXT NOT NULL,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                );
+            `);
+
         } catch (e) {
             console.error("Database check/seeding failed: ", e);
         }

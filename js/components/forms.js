@@ -246,8 +246,15 @@ const Forms = {
                             const trigDate = new Date(triggerTimeMS);
                             trigDate.setMinutes(trigDate.getMinutes() - trigDate.getTimezoneOffset());
                             const notifTimeStr = trigDate.toISOString().replace('T', ' ').slice(0, 19);
-                            await API.execute("INSERT INTO notifications (title, body, type, scheduled_time, sent) VALUES (?, ?, 'schedule', ?, 0)",
-                                [notifTitle, notifBody, notifTimeStr]);
+                            // Dedup check: skip if same title + same scheduled_time already exists
+                            const exist = await API.query(
+                                "SELECT id FROM notifications WHERE title = ? AND scheduled_time = ? AND type = 'schedule'",
+                                [notifTitle, notifTimeStr]
+                            );
+                            if (exist.length === 0) {
+                                await API.execute("INSERT INTO notifications (title, body, type, scheduled_time, sent) VALUES (?, ?, 'schedule', ?, 0)",
+                                    [notifTitle, notifBody, notifTimeStr]);
+                            }
                         }
                     };
 
@@ -374,8 +381,15 @@ const Forms = {
                             const trigDate = new Date(triggerTimeMS);
                             trigDate.setMinutes(trigDate.getMinutes() - trigDate.getTimezoneOffset());
                             const notifTimeStr = trigDate.toISOString().replace('T', ' ').slice(0, 19);
-                            await API.execute("INSERT INTO notifications (title, body, type, scheduled_time, sent) VALUES (?, ?, 'assignment', ?, 0)",
-                                [notifTitle, notifBody, notifTimeStr]);
+                            // Dedup check: skip if same title + same scheduled_time already exists
+                            const exist = await API.query(
+                                "SELECT id FROM notifications WHERE title = ? AND scheduled_time = ? AND type = 'assignment'",
+                                [notifTitle, notifTimeStr]
+                            );
+                            if (exist.length === 0) {
+                                await API.execute("INSERT INTO notifications (title, body, type, scheduled_time, sent) VALUES (?, ?, 'assignment', ?, 0)",
+                                    [notifTitle, notifBody, notifTimeStr]);
+                            }
                         }
                     };
 
@@ -512,6 +526,13 @@ const Forms = {
                 try {
                     await API.execute("UPDATE assignments SET status = ?, progress = ?, notes = ? WHERE id = ?",
                         [status, progress, notes ? notes : null, assignment.id]);
+                    // Sync: if marked done/submitted, remove its pending notifications
+                    if (status === 'submitted') {
+                        await API.execute(
+                            "DELETE FROM notifications WHERE type = 'assignment' AND sent = 0 AND title LIKE ?",
+                            [`%${assignment.title}%`]
+                        );
+                    }
                     Modal.close();
                     onUpdateSuccess();
                 } catch (err) {
@@ -523,6 +544,11 @@ const Forms = {
                 if (confirm('Are you sure you want to delete this assignment?')) {
                     try {
                         await API.execute("DELETE FROM assignments WHERE id = ?", [assignment.id]);
+                        // Sync: remove any pending notifications for this assignment
+                        await API.execute(
+                            "DELETE FROM notifications WHERE type = 'assignment' AND sent = 0 AND title LIKE ?",
+                            [`%${assignment.title}%`]
+                        );
                         Modal.close();
                         onUpdateSuccess();
                     } catch (err) {
@@ -583,6 +609,11 @@ const Forms = {
                 if (confirm('Are you sure you want to delete this event?')) {
                     try {
                         await API.execute("DELETE FROM schedule WHERE id = ?", [event.id]);
+                        // Sync: remove any pending notifications for this event
+                        await API.execute(
+                            "DELETE FROM notifications WHERE type = 'schedule' AND sent = 0 AND title LIKE ?",
+                            [`%${event.title}%`]
+                        );
                         Modal.close();
                         onDeleteSuccess();
                     } catch (err) {
