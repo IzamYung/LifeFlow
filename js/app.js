@@ -460,13 +460,63 @@ const App = {
             const dbNotif = await API.query("SELECT value_val FROM settings WHERE key_name = 'notifications_enabled'");
             const isEnabled = dbNotif[0] ? dbNotif[0].value_val === '1' : true;
 
-            if (isEnabled && window.Notification && Notification.permission === 'default') {
-                setTimeout(() => {
-                    Notification.requestPermission();
-                }, 2000);
+            if (isEnabled) {
+                if (window.Notification && Notification.permission === 'granted') {
+                    this.subscribeToWebPush();
+                } else if (window.Notification && Notification.permission === 'default') {
+                    setTimeout(() => {
+                        Notification.requestPermission().then(perm => {
+                            if (perm === 'granted') this.subscribeToWebPush();
+                        });
+                    }, 2000);
+                }
             }
         } catch (err) {
             console.error('Core configuration setup failed: ' + err.message);
+        }
+    },
+
+    // Register Web Push subscription to Turso cloud for cron-job.org
+    async subscribeToWebPush() {
+        if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+        if (!window.Notification || Notification.permission !== 'granted') return;
+
+        try {
+            const reg = await navigator.serviceWorker.ready;
+            let sub = await reg.pushManager.getSubscription();
+
+            if (!sub) {
+                const publicKey = "BKo1ZzuNImLi5DaIJzwzjB9t1uE3SUaAhVLGWMWbtub8p4Eq_eZATXK9Fs-DruPoNNvuUZZHN0vJF3THehYKn7E";
+                const padding = '='.repeat((4 - publicKey.length % 4) % 4);
+                const base64 = (publicKey + padding).replace(/\-/g, '+').replace(/_/g, '/');
+                const rawData = window.atob(base64);
+                const outputArray = new Uint8Array(rawData.length);
+                for (let i = 0; i < rawData.length; ++i) {
+                    outputArray[i] = rawData.charCodeAt(i);
+                }
+
+                sub = await reg.pushManager.subscribe({
+                    userVisibleOnly: true,
+                    applicationServerKey: outputArray
+                });
+            }
+
+            if (sub) {
+                const subJson = sub.toJSON();
+                const p256dh = subJson.keys?.p256dh || '';
+                const auth = subJson.keys?.auth || '';
+                const endpoint = sub.endpoint;
+
+                if (endpoint && p256dh && auth) {
+                    await API.execute(
+                        "INSERT OR REPLACE INTO push_subscriptions (endpoint, p256dh, auth) VALUES (?, ?, ?)",
+                        [endpoint, p256dh, auth]
+                    );
+                    console.log("Web push subscription synced with Turso cloud.");
+                }
+            }
+        } catch (e) {
+            console.warn("Web Push subscription sync failed:", e);
         }
     },
 

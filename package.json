@@ -1,0 +1,9 @@
+{
+  "name": "lifeflow",
+  "version": "1.0.0",
+  "description": "Lifeflow Student Productivity PWA",
+  "dependencies": {
+    "web-push": "^3.6.7"
+  }
+}
+
