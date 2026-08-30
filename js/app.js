@@ -88,6 +88,7 @@ const App = {
                 appContainer.style.display = 'flex';
 
                 // Initialize SPA routers, FAB, and pull-to-refresh
+                this.initRouting();
                 this.initFAB();
                 this.initPullToRefresh();
                 await this.initThemeAndPermissions();
