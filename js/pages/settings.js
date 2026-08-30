@@ -1,4 +1,4 @@
-/* C:\Users\razn\.gemini\antigravity\scratch\lifeflow\js\pages\settings.js */
+/* UniFlow */
 
 const SettingsPage = {
     settings: {},
@@ -64,7 +64,7 @@ const SettingsPage = {
                                         <svg viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
                                     </div>
                                     <div class="settings-label" style="flex:1;">
-                                        <span class="settings-title">Install Lifeflow App</span>
+                                        <span class="settings-title">Install UniFlow App</span>
                                         <span class="settings-subtitle" id="pwa-status-text">Install to home screen for offline access & background notifications.</span>
                                     </div>
                                 </div>
@@ -302,7 +302,7 @@ const SettingsPage = {
                 btnInstall.style.cursor = 'default';
             }
             if (statusText) {
-                statusText.textContent = 'Lifeflow is currently running as an installed standalone app.';
+                statusText.textContent = 'UniFlow is currently running as an installed standalone app.';
             }
         } else if (btnInstall) {
             btnInstall.onclick = async (e) => {
@@ -323,7 +323,7 @@ const SettingsPage = {
                     const guideHtml = `
                         <div style="display:flex; flex-direction:column; gap:14px; padding:4px 0 16px 0;">
                             <p style="font-size:13px; color:var(--text-secondary); margin:0;">
-                                Install Lifeflow to your device home screen for quick offline access and background notifications:
+                                Install UniFlow to your device home screen for quick offline access and background notifications:
                             </p>
                             
                             <div style="background:var(--surface-variant); border-radius:var(--radius-md); padding:14px; border:1px solid var(--border-color);">
@@ -352,7 +352,7 @@ const SettingsPage = {
                             <button class="btn btn-primary" style="width:100%; margin-top:6px;" onclick="Modal.close()">Got it</button>
                         </div>
                     `;
-                    Modal.open('How to Install Lifeflow', guideHtml);
+                    Modal.open('How to Install UniFlow', guideHtml);
                 }
             };
         }

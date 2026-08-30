@@ -1,4 +1,4 @@
-/* C:\Users\razn\.gemini\antigravity\scratch\lifeflow\js\pages\assignment.js */
+/* UniFlow */
 
 const AssignmentPage = {
     assignments: [],

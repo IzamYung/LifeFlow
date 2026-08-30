@@ -1,4 +1,4 @@
-/* C:\Users\razn\.gemini\antigravity\scratch\lifeflow\js\pages\schedule.js */
+/* UniFlow */
 
 const SchedulePage = {
     currentDate: new Date(),

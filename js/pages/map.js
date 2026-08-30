@@ -1,4 +1,4 @@
-/* C:\Users\razn\.gemini\antigravity\scratch\lifeflow\js\pages\map.js */
+/* UniFlow */
 
 const MapPage = {
     map: null,

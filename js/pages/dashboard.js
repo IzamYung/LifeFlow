@@ -1,4 +1,4 @@
-/* C:\Users\razn\.gemini\antigravity\scratch\lifeflow\js\pages\dashboard.js */
+/* UniFlow */
 
 const DashboardPage = {
     async render(container) {

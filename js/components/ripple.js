@@ -1,4 +1,4 @@
-/* C:\Users\razn\.gemini\antigravity\scratch\lifeflow\js\components\ripple.js */
+/* UniFlow */
 
 const Ripple = {
     init() {

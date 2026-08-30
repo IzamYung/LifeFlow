@@ -1,4 +1,4 @@
-/* C:\Users\razn\.gemini\antigravity\scratch\lifeflow\js\pages\planner.js */
+/* UniFlow */
 
 const PlannerPage = {
     activeTab: 'schedule', // Default tab: 'schedule' or 'tasks'

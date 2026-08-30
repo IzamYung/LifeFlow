@@ -1,4 +1,4 @@
-/* C:\Users\razn\.gemini\antigravity\scratch\lifeflow\js\pages\qibla.js */
+/* UniFlow */
 
 const QiblaPage = {
     qiblaBearing: 292.0, // Default average bearing for Malaysia (Northwest)

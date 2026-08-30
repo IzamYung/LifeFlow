@@ -1,4 +1,4 @@
-/* C:\Users\razn\.gemini\antigravity\scratch\lifeflow\js\pages\prayer.js */
+/* UniFlow */
 
 const PrayerPage = {
     cache: {}, // Holds monthly query cache: { "zone-year-month": [prayerTimeArray] }

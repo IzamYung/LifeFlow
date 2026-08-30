@@ -1,4 +1,4 @@
-/* C:\Users\razn\.gemini\antigravity\scratch\lifeflow\js\components\modal.js */
+/* UniFlow */
 
 const Modal = {
     overlay: null,

@@ -1,6 +1,6 @@
 {
-  "name": "Lifeflow",
-  "short_name": "Lifeflow",
+  "name": "UniFlow",
+  "short_name": "UniFlow",
   "description": "Your student life, organized — finance, schedules & more",
   "start_url": "./index.html",
   "display": "standalone",

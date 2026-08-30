@@ -1,4 +1,4 @@
-/* C:\Users\razn\.gemini\antigravity\scratch\lifeflow\js\pages\vault.js */
+/* UniFlow */
 
 const VaultPage = {
     currentFolderId: null, // null means root '/'

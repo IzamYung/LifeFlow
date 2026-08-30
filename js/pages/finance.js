@@ -1,4 +1,4 @@
-/* C:\Users\razn\.gemini\antigravity\scratch\lifeflow\js\pages\finance.js */
+/* UniFlow */
 
 const FinancePage = {
     wallets: [],

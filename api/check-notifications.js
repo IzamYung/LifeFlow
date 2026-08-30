@@ -5,7 +5,7 @@ const TURSO_TOKEN = process.env.TURSO_TOKEN || "eyJhbGciOiJFZERTQSIsInR5cCI6IkpX
 
 const VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY || "BKo1ZzuNImLi5DaIJzwzjB9t1uE3SUaAhVLGWMWbtub8p4Eq_eZATXK9Fs-DruPoNNvuUZZHN0vJF3THehYKn7E";
 const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY || "A52wD5bviAAB1M_Z1_4P2Eih8ML1jeCpp_wYDTbwwTY";
-const VAPID_SUBJECT = "mailto:admin@lifeflow.app";
+const VAPID_SUBJECT = "mailto:admin@uniflow.app";
 
 webpush.setVapidDetails(
     VAPID_SUBJECT,
@@ -107,7 +107,7 @@ module.exports = async function handler(req, res) {
 
         for (const notif of pendingNotifs) {
             const payload = JSON.stringify({
-                title: notif.title || 'Lifeflow Notification',
+                title: notif.title || 'UniFlow Notification',
                 body: notif.body || '',
                 icon: './logo.png',
                 badge: './logo.png',

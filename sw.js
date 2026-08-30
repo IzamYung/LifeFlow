@@ -1,4 +1,4 @@
-const CACHE_NAME = 'lifeflow-cache-v1';
+const CACHE_NAME = 'uniflow-cache-v1';
 const TURSO_URL = 'https://uniflow-razn.aws-ap-northeast-1.turso.io';
 const TURSO_TOKEN = 'eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJhIjoicnciLCJpYXQiOjE3ODI5MTQxNTYsImlkIjoiMDE5ZjFkYjQtMDMwMS03MzIzLTgwMTctZTU2ZThlYWQ4Y2RjIiwia2lkIjoiWS16TWJXcUJtTU9XVGRDWDFSaVo5MG82aGFmQVlIWV9Vb21ndjJHTjFRZyIsInJpZCI6IjU3MDdjMDY5LWRlM2UtNDhiZS1hNGI1LTY0MWU0OTMzMjU3OSJ9.tTcJ9qz6v2iFgy6Z4f-pfldcXyfbg09HIo9Dbv7TWjHjyMyMY7c4ZPfAW2dYlkIHPZ5p8BBzkVu7D20VnMnGBg';
 
@@ -109,7 +109,7 @@ async function checkAndShowNotifications() {
 
             for (const notif of rows) {
                 // Show notification to user
-                await self.registration.showNotification(notif.title || 'Lifeflow Notification', {
+                await self.registration.showNotification(notif.title || 'UniFlow Notification', {
                     body: notif.body || '',
                     icon: './logo.png',
                     badge: './logo.png',
@@ -197,7 +197,7 @@ self.addEventListener('sync', (event) => {
 
 // Push API Event: Handle server push notifications (Vercel Cron -> Web Push)
 self.addEventListener('push', (event) => {
-    let data = { title: 'Lifeflow Alert', body: 'New update from Lifeflow!' };
+    let data = { title: 'UniFlow Alert', body: 'New update from UniFlow!' };
     try {
         if (event.data) {
             data = event.data.json();
@@ -217,7 +217,7 @@ self.addEventListener('push', (event) => {
     };
 
     event.waitUntil(
-        self.registration.showNotification(data.title || 'Lifeflow Notification', options)
+        self.registration.showNotification(data.title || 'UniFlow Notification', options)
     );
 });
 
