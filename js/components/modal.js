@@ -6,6 +6,8 @@ const Modal = {
     titleEl: null,
     contentEl: null,
     closeBtn: null,
+    editBtn: null,
+    onEditHandler: null,
     startY: 0,
     currentY: 0,
     isDragging: false,
@@ -16,21 +18,42 @@ const Modal = {
         this.titleEl = document.getElementById('sheet-title');
         this.contentEl = document.getElementById('sheet-content-area');
         this.closeBtn = document.getElementById('sheet-close-btn');
+        this.editBtn = document.getElementById('sheet-edit-btn');
 
         // Bind dismiss listeners
         this.closeBtn.addEventListener('click', () => this.close());
         this.overlay.addEventListener('click', () => this.close());
 
+        if (this.editBtn) {
+            this.editBtn.addEventListener('click', () => {
+                if (typeof this.onEditHandler === 'function') {
+                    this.onEditHandler();
+                }
+            });
+        }
+
         // Setup drag-to-dismiss gesture for mobile
         const handle = document.getElementById('global-sheet-handle');
-        handle.addEventListener('touchstart', (e) => this.onTouchStart(e), { passive: true });
-        handle.addEventListener('touchmove', (e) => this.onTouchMove(e), { passive: false });
-        handle.addEventListener('touchend', () => this.onTouchEnd(), { passive: true });
+        if (handle) {
+            handle.addEventListener('touchstart', (e) => this.onTouchStart(e), { passive: true });
+            handle.addEventListener('touchmove', (e) => this.onTouchMove(e), { passive: false });
+            handle.addEventListener('touchend', () => this.onTouchEnd(), { passive: true });
+        }
     },
 
-    open(title, htmlContent, onOpenCallback = null) {
+    open(title, htmlContent, onOpenCallback = null, onEditClick = null) {
         this.titleEl.textContent = title;
         this.contentEl.innerHTML = htmlContent;
+
+        if (this.editBtn) {
+            if (typeof onEditClick === 'function') {
+                this.editBtn.style.display = 'flex';
+                this.onEditHandler = onEditClick;
+            } else {
+                this.editBtn.style.display = 'none';
+                this.onEditHandler = null;
+            }
+        }
 
         // Toggle active classes to slide sheet up
         this.overlay.classList.add('active');
@@ -45,11 +68,43 @@ const Modal = {
         }
     },
 
+    // Smooth transition from Details to Edit Form (slides down, swaps content, slides up)
+    transitionTo(title, htmlContent, onOpenCallback = null) {
+        if (!this.sheet) return;
+
+        // 1. Smoothly slide down the current modal
+        this.sheet.classList.remove('active');
+
+        // 2. Wait for slide-down animation to complete (280ms)
+        setTimeout(() => {
+            this.titleEl.textContent = title;
+            this.contentEl.innerHTML = htmlContent;
+
+            // Hide the edit button in the edit form
+            if (this.editBtn) {
+                this.editBtn.style.display = 'none';
+                this.onEditHandler = null;
+            }
+
+            if (typeof onOpenCallback === 'function') {
+                onOpenCallback(this.contentEl);
+            }
+
+            // 3. Smoothly slide back up with the edit form
+            this.sheet.classList.add('active');
+            this.overlay.classList.add('active');
+        }, 280);
+    },
+
     close() {
         if (!this.overlay) return;
         this.overlay.classList.remove('active');
         this.sheet.classList.remove('active');
         document.body.style.overflow = '';
+        if (this.editBtn) {
+            this.editBtn.style.display = 'none';
+            this.onEditHandler = null;
+        }
         
         // Clear content after transitions complete
         setTimeout(() => {

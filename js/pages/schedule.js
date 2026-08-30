@@ -209,12 +209,12 @@ const SchedulePage = {
 
     bindEvents() {
         document.getElementById('cal-prev-month').addEventListener('click', () => {
-            this.currentDate.setMonth(this.currentDate.getMonth() - 1);
+            this.currentDate = new Date(this.currentDate.getFullYear(), this.currentDate.getMonth() - 1, 1);
             this.loadEventsData();
         });
 
         document.getElementById('cal-next-month').addEventListener('click', () => {
-            this.currentDate.setMonth(this.currentDate.getMonth() + 1);
+            this.currentDate = new Date(this.currentDate.getFullYear(), this.currentDate.getMonth() + 1, 1);
             this.loadEventsData();
         });
 

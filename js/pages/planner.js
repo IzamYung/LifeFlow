@@ -298,7 +298,7 @@ const PlannerPage = {
         const prevMonth = document.getElementById('cal-prev-month');
         if (prevMonth) {
             prevMonth.addEventListener('click', () => {
-                this.schedCurrentDate.setMonth(this.schedCurrentDate.getMonth() - 1);
+                this.schedCurrentDate = new Date(this.schedCurrentDate.getFullYear(), this.schedCurrentDate.getMonth() - 1, 1);
                 this.loadEventsData();
             });
         }
@@ -306,7 +306,7 @@ const PlannerPage = {
         const nextMonth = document.getElementById('cal-next-month');
         if (nextMonth) {
             nextMonth.addEventListener('click', () => {
-                this.schedCurrentDate.setMonth(this.schedCurrentDate.getMonth() + 1);
+                this.schedCurrentDate = new Date(this.schedCurrentDate.getFullYear(), this.schedCurrentDate.getMonth() + 1, 1);
                 this.loadEventsData();
             });
         }

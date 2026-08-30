@@ -138,8 +138,8 @@ const PrayerPage = {
                     <div style="display: flex; flex-direction: column; gap: 4px;">
                         <label for="prayer-zone-select" style="font-size: 11px; font-weight: 700; color: var(--text-secondary); text-transform: uppercase;">Location / Zone</label>
                         <div style="position: relative; display: flex; align-items: center;">
-                            <span style="position: absolute; left: 12px; color: var(--text-secondary); pointer-events: none; font-size: 14px;">📍</span>
-                            <select id="prayer-zone-select" style="width:100%; padding: 10px 10px 10px 34px; border-radius:var(--radius-sm); border:1px solid var(--border-color); background-color:var(--surface-color); color:var(--text-primary); font-size:13px; font-weight:600; cursor: pointer; outline: none;">
+                            <span style="position: absolute; left: 12px; z-index: 2; color: var(--text-secondary); pointer-events: none; font-size: 15px; line-height: 1;">📍</span>
+                            <select id="prayer-zone-select" style="width:100%; padding: 12px 14px 12px 38px !important; border-radius:var(--radius-sm); border:1px solid var(--border-color); background-color:var(--surface-color); color:var(--text-primary); font-size:13.5px; font-weight:600; cursor: pointer; outline: none; min-height: 44px;">
                                 ${zoneOptions}
                             </select>
                         </div>
