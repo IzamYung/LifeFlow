@@ -474,17 +474,19 @@
     .bottom-sheet {
         width: 480px;
         left: 50%;
-        bottom: 50%;
-        top: auto;
-        transform: translate(-50%, 60%) scale(0.95);
+        top: 50%;
+        bottom: auto;
+        right: auto;
+        transform: translate(-50%, -45%) scale(0.96);
         border-radius: var(--radius-xl);
         opacity: 0;
         pointer-events: none;
         max-height: 90vh;
+        transition: transform var(--transition-normal), opacity var(--transition-normal);
     }
 
     .bottom-sheet.active {
-        transform: translate(-50%, 50%) scale(1);
+        transform: translate(-50%, -50%) scale(1);
         opacity: 1;
         pointer-events: auto;
     }

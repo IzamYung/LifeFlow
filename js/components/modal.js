@@ -42,6 +42,14 @@ const Modal = {
     },
 
     open(title, htmlContent, onOpenCallback = null, onEditClick = null) {
+        if (!this.sheet || !this.titleEl) {
+            this.init();
+        }
+        if (!this.sheet || !this.titleEl) {
+            console.error("Modal container elements not found in DOM");
+            return;
+        }
+
         this.titleEl.textContent = title;
         this.contentEl.innerHTML = htmlContent;
 
@@ -70,6 +78,7 @@ const Modal = {
 
     // Smooth transition from Details to Edit Form (slides down, swaps content, slides up)
     transitionTo(title, htmlContent, onOpenCallback = null) {
+        if (!this.sheet) this.init();
         if (!this.sheet) return;
 
         // 1. Smoothly slide down the current modal
@@ -97,6 +106,7 @@ const Modal = {
     },
 
     close() {
+        if (!this.overlay) this.init();
         if (!this.overlay) return;
         this.overlay.classList.remove('active');
         this.sheet.classList.remove('active');
@@ -108,7 +118,7 @@ const Modal = {
         
         // Clear content after transitions complete
         setTimeout(() => {
-            if (!this.sheet.classList.contains('active')) {
+            if (this.sheet && !this.sheet.classList.contains('active') && this.contentEl) {
                 this.contentEl.innerHTML = '';
             }
         }, 300);
@@ -149,5 +159,9 @@ const Modal = {
     }
 };
 
-// Bind on load
-document.addEventListener('DOMContentLoaded', () => Modal.init());
+// Bind on load safely across any load lifecycle
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => Modal.init());
+} else {
+    Modal.init();
+}

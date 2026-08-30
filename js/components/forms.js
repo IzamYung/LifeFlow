@@ -314,6 +314,11 @@ const Forms = {
                         } else if (recurrence === 'monthly') {
                             const targetMonth = originalStartDate.getMonth() + i;
                             const maxDays = new Date(originalStartDate.getFullYear(), targetMonth + 1, 0).getDate();
+                            const safeDay = Math.min(originalStartDate.getDate(), maxDays);
+                            instStart.setFullYear(originalStartDate.getFullYear(), targetMonth, safeDay);
+                            instEnd.setFullYear(originalEndDate.getFullYear(), targetMonth, safeDay);
+                        }
+
                         // Local time string formatting
                         const instStartFormatted = new Date(instStart.getTime() - instStart.getTimezoneOffset() * 60000).toISOString().replace('T', ' ').slice(0, 19);
                         const instEndFormatted = new Date(instEnd.getTime() - instEnd.getTimezoneOffset() * 60000).toISOString().replace('T', ' ').slice(0, 19);
