@@ -20,7 +20,25 @@ const App = {
                 navigator.serviceWorker.register('./sw.js')
                     .then((reg) => {
                         console.log('Service Worker registered with scope:', reg.scope);
-                        
+
+                        // 1. Check if a new Service Worker is installing
+                        reg.addEventListener('updatefound', () => {
+                            const newWorker = reg.installing;
+                            if (newWorker) {
+                                newWorker.addEventListener('statechange', () => {
+                                    if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                        // New version detected! Show update banner
+                                        App.showUpdateBanner(newWorker);
+                                    }
+                                });
+                            }
+                        });
+
+                        // 2. If a new version is already waiting in background
+                        if (reg.waiting && navigator.serviceWorker.controller) {
+                            App.showUpdateBanner(reg.waiting);
+                        }
+
                         // Register Periodic Background Sync if supported
                         if ('periodicSync' in reg) {
                             navigator.permissions.query({ name: 'periodic-background-sync' }).then((status) => {
@@ -35,7 +53,68 @@ const App = {
                     .catch((err) => {
                         console.error('Service Worker registration failed:', err);
                     });
+
+                // 3. Reload page when the new Service Worker takes control
+                let refreshing = false;
+                navigator.serviceWorker.addEventListener('controllerchange', () => {
+                    if (!refreshing) {
+                        refreshing = true;
+                        window.location.reload();
+                    }
+                });
             });
+        }
+    },
+
+    // Show PWA Update Banner when a new version is ready
+    showUpdateBanner(worker) {
+        if (document.getElementById('pwa-update-banner')) return;
+
+        const banner = document.createElement('div');
+        banner.id = 'pwa-update-banner';
+        banner.className = 'pwa-update-banner';
+        banner.innerHTML = `
+            <div class="update-banner-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                    <polyline points="7 10 12 15 17 10"/>
+                    <line x1="12" y1="15" x2="12" y2="3"/>
+                </svg>
+            </div>
+            <div class="update-banner-info">
+                <div class="update-banner-title">New update available!</div>
+                <div class="update-banner-sub">Click update to load the latest version.</div>
+            </div>
+            <button class="update-banner-btn ripple-container" id="pwa-update-action-btn">
+                Update Now
+            </button>
+        `;
+
+        document.body.appendChild(banner);
+
+        // Smooth slide-up animation
+        requestAnimationFrame(() => {
+            banner.classList.add('visible');
+        });
+
+        const updateBtn = document.getElementById('pwa-update-action-btn');
+        if (updateBtn) {
+            updateBtn.onclick = () => {
+                updateBtn.textContent = 'Updating...';
+                updateBtn.disabled = true;
+
+                if (worker) {
+                    worker.postMessage({ type: 'SKIP_WAITING' });
+                } else if (navigator.serviceWorker) {
+                    navigator.serviceWorker.getRegistration().then(reg => {
+                        if (reg && reg.waiting) {
+                            reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+                        } else {
+                            window.location.reload();
+                        }
+                    });
+                }
+            };
         }
     },
 

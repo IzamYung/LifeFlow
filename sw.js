@@ -131,13 +131,20 @@ async function checkAndShowNotifications() {
     }
 }
 
+// Message Event: Listen for SKIP_WAITING signal from client update banner
+self.addEventListener('message', (event) => {
+    if (event.data && event.data.type === 'SKIP_WAITING') {
+        self.skipWaiting();
+    }
+});
+
 // Install Event: Cache assets
 self.addEventListener('install', (event) => {
     event.waitUntil(
         caches.open(CACHE_NAME).then((cache) => {
             console.log('Caching offline assets...');
             return cache.addAll(ASSETS);
-        }).then(() => self.skipWaiting())
+        })
     );
 });
 
