@@ -652,7 +652,7 @@ const Forms = {
         });
     },
 
-    // Helper: Assignment edit form HTML
+    // Helper: Assignment edit form HTML (Title, Subject, Priority, Due Date)
     getEditAssignmentHTML(assignment) {
         const dueVal = assignment.due_date ? assignment.due_date.replace(' ', 'T').slice(0, 16) : '';
         return `
@@ -681,30 +681,6 @@ const Forms = {
                     <input type="datetime-local" id="eas-due" name="due_date" value="${dueVal}" required>
                 </div>
 
-                <div class="form-group">
-                    <label for="eas-status">Status</label>
-                    <select id="eas-status" name="status" required>
-                        <option value="pending" ${assignment.status === 'pending' ? 'selected' : ''}>Pending / To Do</option>
-                        <option value="in_progress" ${assignment.status === 'in_progress' ? 'selected' : ''}>In Progress</option>
-                        <option value="submitted" ${assignment.status === 'submitted' ? 'selected' : ''}>Submitted / Done</option>
-                    </select>
-                </div>
-
-                <div class="form-group">
-                    <div class="progress-header">
-                        <label>Completion Progress</label>
-                        <span class="progress-percent" id="edit-slider-bubble">${assignment.progress || 0}%</span>
-                    </div>
-                    <div class="slider-container" style="margin-top:6px;">
-                        <input type="range" id="eas-progress" name="progress" min="0" max="100" value="${assignment.progress || 0}">
-                    </div>
-                </div>
-
-                <div class="form-group">
-                    <label for="eas-notes">Assignment Notes</label>
-                    <textarea id="eas-notes" name="notes" rows="3" placeholder="Rubrics details, requirements...">${assignment.notes || ''}</textarea>
-                </div>
-
                 <div class="form-actions">
                     <button type="button" class="btn btn-secondary" onclick="Modal.close()">Cancel</button>
                     <button type="submit" class="btn btn-primary">Update Task</button>
@@ -717,32 +693,6 @@ const Forms = {
     bindEditAssignmentForm(container, assignment, onSaveSuccess) {
         const form = container.querySelector('#form-edit-assignment-full');
         const dueInput = container.querySelector('#eas-due');
-        const progressSlider = container.querySelector('#eas-progress');
-        const progressBubble = container.querySelector('#edit-slider-bubble');
-        const statusSelect = container.querySelector('#eas-status');
-
-        progressSlider.addEventListener('input', (e) => {
-            const val = e.target.value;
-            progressBubble.textContent = `${val}%`;
-            if (val == 100) {
-                statusSelect.value = 'submitted';
-            } else if (val > 0 && val < 100) {
-                statusSelect.value = 'in_progress';
-            } else {
-                statusSelect.value = 'pending';
-            }
-        });
-
-        statusSelect.addEventListener('change', (e) => {
-            const status = e.target.value;
-            if (status === 'submitted') {
-                progressSlider.value = 100;
-                progressBubble.textContent = '100%';
-            } else if (status === 'pending') {
-                progressSlider.value = 0;
-                progressBubble.textContent = '0%';
-            }
-        });
 
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -750,14 +700,14 @@ const Forms = {
             const subject = document.getElementById('eas-subject').value.trim();
             const priority = document.getElementById('eas-priority').value;
             const due_date = dueInput.value.replace('T', ' ') + ':00';
-            const status = statusSelect.value;
-            const progress = parseInt(progressSlider.value, 10);
-            const notes = document.getElementById('eas-notes').value.trim();
+            const status = assignment.status || 'pending';
+            const progress = typeof assignment.progress === 'number' ? assignment.progress : (parseInt(assignment.progress, 10) || 0);
+            const notes = assignment.notes || null;
 
             try {
                 await API.execute(
                     "UPDATE assignments SET title = ?, subject = ?, priority = ?, due_date = ?, status = ?, progress = ?, notes = ? WHERE id = ?",
-                    [title, subject, priority, due_date, status, progress, notes ? notes : null, assignment.id]
+                    [title, subject, priority, due_date, status, progress, notes, assignment.id]
                 );
 
                 // Sync Notifications: Delete old pending alerts for this assignment
