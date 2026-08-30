@@ -80,15 +80,24 @@ module.exports = async function handler(req, res) {
             );
         `);
 
-        // 2. Fetch pending notifications due now
+        // 2. Calculate current time in Malaysia Timezone (UTC + 8 hours)
+        const nowUTC = new Date();
+        const nowMY = new Date(nowUTC.getTime() + (8 * 60 * 60 * 1000));
+        const localTimeStr = nowMY.toISOString().replace('T', ' ').slice(0, 19);
+
+        const cleanupDate = new Date(nowMY.getTime() - (14 * 24 * 60 * 60 * 1000));
+        const cleanupTimeStr = cleanupDate.toISOString().replace('T', ' ').slice(0, 19);
+
+        // Fetch pending notifications due now (matching Malaysia scheduled_time)
         const pendingNotifs = await executeOnTurso(
-            "SELECT id, title, body, type, scheduled_time FROM notifications WHERE sent = 0 AND datetime(scheduled_time) <= datetime('now', 'localtime')"
+            "SELECT id, title, body, type, scheduled_time FROM notifications WHERE sent = 0 AND datetime(scheduled_time) <= datetime(?)",
+            [localTimeStr]
         );
 
         if (!pendingNotifs || pendingNotifs.length === 0) {
             // Auto-cleanup sent notifications older than 14 days
-            await executeOnTurso("DELETE FROM notifications WHERE sent = 1 AND datetime(scheduled_time) < datetime('now', '-14 days')");
-            return res.status(200).json({ success: true, message: "No pending notifications.", processed: 0 });
+            await executeOnTurso("DELETE FROM notifications WHERE sent = 1 AND datetime(scheduled_time) < datetime(?)", [cleanupTimeStr]);
+            return res.status(200).json({ success: true, message: "No pending notifications.", timeChecked: localTimeStr, processed: 0 });
         }
 
         // 3. Fetch active push subscriptions
@@ -134,11 +143,12 @@ module.exports = async function handler(req, res) {
         }
 
         // 5. Clean up old 2-week-old notifications
-        await executeOnTurso("DELETE FROM notifications WHERE sent = 1 AND datetime(scheduled_time) < datetime('now', '-14 days')");
+        await executeOnTurso("DELETE FROM notifications WHERE sent = 1 AND datetime(scheduled_time) < datetime(?)", [cleanupTimeStr]);
 
         return res.status(200).json({
             success: true,
             message: `Processed ${pendingNotifs.length} notification(s). Sent ${pushCount} push messages.`,
+            timeChecked: localTimeStr,
             processed: pendingNotifs.length,
             pushesSent: pushCount
         });
