@@ -79,9 +79,9 @@ const QiblaPage = {
                     </div>
 
                     <!-- Details Display -->
-                    <div style="text-align: center; margin-top: 30px; width: 100%; max-width: 320px;">
-                        <h3 id="qibla-status-text" style="font-family:var(--font-heading); color:var(--text-secondary);">Detecting orientation...</h3>
-                        <div class="card" style="margin-top: 16px; padding: 12px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                    <div style="text-align: center; margin-top: 24px; width: 100%; max-width: 340px;">
+                        <h3 id="qibla-status-text" style="font-family:var(--font-heading); color:var(--text-secondary); min-height:28px;">Detecting orientation...</h3>
+                        <div class="card" style="margin-top: 14px; padding: 14px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
                             <div>
                                 <div style="font-size: 11px; font-weight: 700; color: var(--text-secondary);">QIBLA ANGLE</div>
                                 <div id="lbl-qibla-bearing" style="font-size: 20px; font-weight: 800; font-family: var(--font-heading); color: var(--success);">292.0°</div>
@@ -91,6 +91,11 @@ const QiblaPage = {
                                 <div id="lbl-device-heading" style="font-size: 20px; font-weight: 800; font-family: var(--font-heading); color: var(--primary);">0°</div>
                             </div>
                         </div>
+
+                        <!-- Test Haptic Button -->
+                        <button class="btn btn-secondary" id="btn-test-haptic" style="margin-top: 12px; width: 100%; font-size: 12px; font-weight: 700; padding: 10px; display: flex; align-items: center; justify-content: center; gap: 6px; border: 1px dashed var(--primary); color: var(--primary); background: rgba(var(--primary-rgb), 0.06);">
+                            📳 Test Haptic & Chime
+                        </button>
                     </div>
                 </div>
             </div>
@@ -101,8 +106,22 @@ const QiblaPage = {
             if (page) page.classList.add('active');
         }, 50);
 
+        // Bind test haptic button
+        const btnTest = document.getElementById('btn-test-haptic');
+        if (btnTest) {
+            btnTest.addEventListener('click', () => {
+                this.triggerHaptic(true);
+                btnTest.textContent = '✅ Vibrated & Chimed!';
+                setTimeout(() => {
+                    btnTest.textContent = '📳 Test Haptic & Chime';
+                }, 1500);
+            });
+        }
+
         this.dialRotation = 0;
         this.arrowRotation = 0;
+        this.lastVibrateTime = 0;
+        this.wasAligned = false;
 
         // 1. Calculate Qibla Bearing (GPS or Zone Fallback)
         await this.initLocationAndBearing();
@@ -274,6 +293,49 @@ const QiblaPage = {
     lastVibrateTime: 0,
     wasAligned: false,
 
+    audioCtx: null,
+
+    playChime() {
+        try {
+            const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+            if (!AudioContextClass) return;
+            if (!this.audioCtx) {
+                this.audioCtx = new AudioContextClass();
+            }
+            if (this.audioCtx.state === 'suspended') {
+                this.audioCtx.resume();
+            }
+            const osc = this.audioCtx.createOscillator();
+            const gain = this.audioCtx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(880, this.audioCtx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(1760, this.audioCtx.currentTime + 0.12);
+            gain.gain.setValueAtTime(0.2, this.audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, this.audioCtx.currentTime + 0.35);
+            osc.connect(gain);
+            gain.connect(this.audioCtx.destination);
+            osc.start();
+            osc.stop(this.audioCtx.currentTime + 0.35);
+        } catch (e) {
+            // Audio context not available
+        }
+    },
+
+    triggerHaptic(isInitial = false) {
+        if ('vibrate' in navigator) {
+            try {
+                if (isInitial) {
+                    navigator.vibrate([180, 80, 200]);
+                } else {
+                    navigator.vibrate(120);
+                }
+            } catch (e) {
+                console.warn('Vibration API:', e);
+            }
+        }
+        this.playChime();
+    },
+
     updateCompass(heading) {
         if (this.sensorTimeout) {
             clearTimeout(this.sensorTimeout);
@@ -303,45 +365,49 @@ const QiblaPage = {
 
         if (lblHeading) lblHeading.textContent = `${Math.round(heading)}°`;
 
-        // 4. Check alignment (tolerance within 4 degrees)
+        // 4. Check visual alignment vs exact vibration lock
         const rawDiff = Math.abs(heading - this.qiblaBearing);
         const normalizedDiff = Math.min(rawDiff, 360 - rawDiff);
-        const isAligned = normalizedDiff <= 4.0;
+        
+        const isNearQibla = normalizedDiff <= 8.0;      // Green visual zone
+        const isExactQibla = normalizedDiff <= 1.5 || (Math.round(heading) === Math.round(this.qiblaBearing)); // Exact bullseye lock for vibration
 
         const now = Date.now();
 
-        if (isAligned) {
+        if (isExactQibla) {
+            // EXACT BULLSEYE MATCH -> VIBRATE!
             dial.style.borderColor = 'var(--success)';
-            dial.style.boxShadow = '0 0 30px rgba(16, 185, 129, 0.45), 0 0 10px rgba(16, 185, 129, 0.3)';
+            dial.style.boxShadow = '0 0 36px rgba(16, 185, 129, 0.6), 0 0 16px rgba(16, 185, 129, 0.4)';
             if (statusText) {
-                statusText.textContent = '🕋 ALIGNED WITH QIBLA';
-                statusText.style.color = 'var(--success)';
+                statusText.innerHTML = '<span style="color:var(--success); font-weight:800; font-size:16px;">🕋 EXACT QIBLA DIRECTION (100%)</span>';
             }
-            
-            // Haptic vibration on entering alignment or every 1.5s while holding
-            if (('vibrate' in navigator)) {
-                if (!this.wasAligned || (now - this.lastVibrateTime > 1500)) {
-                    try {
-                        // Double pulse on initial alignment, single pulse to sustain
-                        if (!this.wasAligned) {
-                            navigator.vibrate([60, 40, 80]);
-                        } else {
-                            navigator.vibrate(50);
-                        }
-                        this.lastVibrateTime = now;
-                    } catch (vibErr) {
-                        console.warn('Vibration API:', vibErr);
-                    }
-                }
+
+            // Trigger haptic vibration ONLY on exact match!
+            if (!this.wasExactAligned || (now - this.lastVibrateTime > 1500)) {
+                this.triggerHaptic(!this.wasExactAligned);
+                this.lastVibrateTime = now;
             }
+            this.wasExactAligned = true;
             this.wasAligned = true;
+
+        } else if (isNearQibla) {
+            // NEAR QIBLA (Visual green guide, no vibration yet)
+            dial.style.borderColor = 'var(--success)';
+            dial.style.boxShadow = '0 0 20px rgba(16, 185, 129, 0.3)';
+            if (statusText) {
+                statusText.innerHTML = '<span style="color:var(--success); font-weight:700; font-size:14px;">🕋 Almost There • Align Needle Centered</span>';
+            }
+            this.wasExactAligned = false;
+            this.wasAligned = true;
+
         } else {
+            // UNALIGNED
             dial.style.borderColor = 'var(--border-color)';
             dial.style.boxShadow = 'var(--card-shadow)';
             if (statusText) {
-                statusText.textContent = 'Rotate device to align needle';
-                statusText.style.color = 'var(--text-secondary)';
+                statusText.innerHTML = '<span style="color:var(--text-secondary); font-size:14px;">Rotate device to align needle</span>';
             }
+            this.wasExactAligned = false;
             this.wasAligned = false;
         }
     },
