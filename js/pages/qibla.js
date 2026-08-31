@@ -91,11 +91,6 @@ const QiblaPage = {
                                 <div id="lbl-device-heading" style="font-size: 20px; font-weight: 800; font-family: var(--font-heading); color: var(--primary);">0°</div>
                             </div>
                         </div>
-
-                        <!-- Test Haptic Button -->
-                        <button class="btn btn-secondary" id="btn-test-haptic" style="margin-top: 12px; width: 100%; font-size: 12px; font-weight: 700; padding: 10px; display: flex; align-items: center; justify-content: center; gap: 6px; border: 1px dashed var(--primary); color: var(--primary); background: rgba(var(--primary-rgb), 0.06);">
-                            📳 Test Haptic & Chime
-                        </button>
                     </div>
                 </div>
             </div>
@@ -105,18 +100,6 @@ const QiblaPage = {
             const page = document.getElementById('qibla-page');
             if (page) page.classList.add('active');
         }, 50);
-
-        // Bind test haptic button
-        const btnTest = document.getElementById('btn-test-haptic');
-        if (btnTest) {
-            btnTest.addEventListener('click', () => {
-                this.triggerHaptic(true);
-                btnTest.textContent = '✅ Vibrated & Chimed!';
-                setTimeout(() => {
-                    btnTest.textContent = '📳 Test Haptic & Chime';
-                }, 1500);
-            });
-        }
 
         this.dialRotation = 0;
         this.arrowRotation = 0;
