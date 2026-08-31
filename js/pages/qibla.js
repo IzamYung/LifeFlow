@@ -271,6 +271,9 @@ const QiblaPage = {
         window.addEventListener('hashchange', checkRouteCleanup);
     },
 
+    lastVibrateTime: 0,
+    wasAligned: false,
+
     updateCompass(heading) {
         if (this.sensorTimeout) {
             clearTimeout(this.sensorTimeout);
@@ -300,23 +303,46 @@ const QiblaPage = {
 
         if (lblHeading) lblHeading.textContent = `${Math.round(heading)}°`;
 
-        // 4. Check alignment (tolerance within 5 degrees)
-        const angleDiff = Math.abs(heading - this.qiblaBearing);
-        const isAligned = angleDiff <= 5 || angleDiff >= 355;
+        // 4. Check alignment (tolerance within 4 degrees)
+        const rawDiff = Math.abs(heading - this.qiblaBearing);
+        const normalizedDiff = Math.min(rawDiff, 360 - rawDiff);
+        const isAligned = normalizedDiff <= 4.0;
+
+        const now = Date.now();
 
         if (isAligned) {
             dial.style.borderColor = 'var(--success)';
-            statusText.textContent = '🕋 ALIGNED WITH QIBLA';
-            statusText.style.color = 'var(--success)';
-            
-            // Trigger haptic vibration
-            if (navigator.vibrate) {
-                navigator.vibrate(30); 
+            dial.style.boxShadow = '0 0 30px rgba(16, 185, 129, 0.45), 0 0 10px rgba(16, 185, 129, 0.3)';
+            if (statusText) {
+                statusText.textContent = '🕋 ALIGNED WITH QIBLA';
+                statusText.style.color = 'var(--success)';
             }
+            
+            // Haptic vibration on entering alignment or every 1.5s while holding
+            if (('vibrate' in navigator)) {
+                if (!this.wasAligned || (now - this.lastVibrateTime > 1500)) {
+                    try {
+                        // Double pulse on initial alignment, single pulse to sustain
+                        if (!this.wasAligned) {
+                            navigator.vibrate([60, 40, 80]);
+                        } else {
+                            navigator.vibrate(50);
+                        }
+                        this.lastVibrateTime = now;
+                    } catch (vibErr) {
+                        console.warn('Vibration API:', vibErr);
+                    }
+                }
+            }
+            this.wasAligned = true;
         } else {
             dial.style.borderColor = 'var(--border-color)';
-            statusText.textContent = 'Rotate device to align needle';
-            statusText.style.color = 'var(--text-secondary)';
+            dial.style.boxShadow = 'var(--card-shadow)';
+            if (statusText) {
+                statusText.textContent = 'Rotate device to align needle';
+                statusText.style.color = 'var(--text-secondary)';
+            }
+            this.wasAligned = false;
         }
     },
 
