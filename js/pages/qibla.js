@@ -322,18 +322,17 @@ const QiblaPage = {
     },
 
     triggerHaptic(isInitial = false) {
-        if ('vibrate' in navigator) {
+        let vibSuccess = false;
+        if (navigator && typeof navigator.vibrate === 'function') {
             try {
-                if (isInitial) {
-                    navigator.vibrate([180, 80, 200]);
-                } else {
-                    navigator.vibrate(120);
-                }
+                // Direct integer millisecond duration has the highest compatibility on Android Chrome / WebView
+                vibSuccess = navigator.vibrate(isInitial ? 300 : 180);
             } catch (e) {
                 console.warn('Vibration API:', e);
             }
         }
         this.playChime();
+        return vibSuccess;
     },
 
     updateCompass(heading) {
