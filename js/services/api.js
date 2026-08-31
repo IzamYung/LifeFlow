@@ -29,36 +29,49 @@ const API = {
 
             this.localDb = new SQL.Database();
             
-            // Enable foreign keys
-            this.localDb.run("PRAGMA foreign_keys = ON;");
+            // Disable foreign keys temporarily during cache population so table order doesn't fail FK constraints
+            this.localDb.run("PRAGMA foreign_keys = OFF;");
 
             // Fetch schemas of all tables on Turso
             const tables = await this.queryOnTurso(
                 "SELECT name, sql FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'"
             );
 
+            // Phase 1: Recreate all table schemas locally first
             for (const table of tables) {
-                const tableName = table.name;
-                const createSql = table.sql;
-
-                // Recreate table schema locally
-                this.localDb.run(createSql);
-
-                // Fetch all data from Turso to populate cache
-                const rows = await this.queryOnTurso(`SELECT * FROM "${tableName}"`);
-                if (rows.length > 0) {
-                    const cols = Object.keys(rows[0]);
-                    const placeholders = cols.map(() => '?').join(', ');
-                    const insertSql = `INSERT INTO "${tableName}" (${cols.map(c => `"${c}"`).join(', ')}) VALUES (${placeholders})`;
-
-                    const stmt = this.localDb.prepare(insertSql);
-                    for (const row of rows) {
-                        const vals = cols.map(c => row[c]);
-                        stmt.run(vals);
+                try {
+                    if (table.sql) {
+                        this.localDb.run(table.sql);
                     }
-                    stmt.free();
+                } catch (e) {
+                    console.warn(`Failed to create table ${table.name} locally:`, e);
                 }
             }
+
+            // Phase 2: Populate data for each table
+            for (const table of tables) {
+                try {
+                    const tableName = table.name;
+                    const rows = await this.queryOnTurso(`SELECT * FROM "${tableName}"`);
+                    if (rows && rows.length > 0) {
+                        const cols = Object.keys(rows[0]);
+                        const placeholders = cols.map(() => '?').join(', ');
+                        const insertSql = `INSERT INTO "${tableName}" (${cols.map(c => `"${c}"`).join(', ')}) VALUES (${placeholders})`;
+
+                        const stmt = this.localDb.prepare(insertSql);
+                        for (const row of rows) {
+                            const vals = cols.map(c => row[c]);
+                            stmt.run(vals);
+                        }
+                        stmt.free();
+                    }
+                } catch (e) {
+                    console.warn(`Failed to sync data for table ${table.name}:`, e);
+                }
+            }
+
+            // Re-enable foreign keys
+            this.localDb.run("PRAGMA foreign_keys = ON;");
             console.log("In-memory SQLite cache sync complete.");
         })();
 
@@ -117,26 +130,50 @@ const API = {
                 throw err;
             }
         } else {
-            // Modifying statement: Execute on Turso and then on local Db cache
+            // Modifying statement: Execute on Turso first
             const tursoResult = await this.executeOnTurso(sql, args);
 
-            try {
-                // Keep local cache in sync
-                this.localDb.run(sql, args);
-                
-                // If it was an INSERT, set the last_insert_rowid locally on the result object
-                if (/^\s*INSERT/i.test(sql) && tursoResult) {
-                    // Get the last row ID from local DB
-                    const lastIdRes = this.localDb.exec("SELECT last_insert_rowid()");
-                    if (lastIdRes && lastIdRes[0] && lastIdRes[0].values[0]) {
-                        tursoResult.last_insert_rowid = lastIdRes[0].values[0][0];
-                    }
+            // Keep local SQLite cache 100% in sync with Turso cloud generated IDs
+            const match = sql.match(/^\s*(?:INSERT\s+(?:OR\s+\w+\s+)?INTO|UPDATE|DELETE\s+FROM)\s+[`"']?([a-zA-Z0-9_]+)[`"']?/i);
+            if (match && match[1]) {
+                const tableName = match[1];
+                await this.syncTableFromTurso(tableName);
+            } else {
+                try {
+                    this.localDb.run(sql, args);
+                } catch (err) {
+                    console.warn("Fallback localDb.run:", err);
                 }
-            } catch (err) {
-                console.error("Failed to sync modifying statement to local SQLite:", sql, args, err);
             }
 
             return tursoResult;
+        }
+    },
+
+    // Sync a specific table from Turso into the local SQLite memory database
+    async syncTableFromTurso(tableName) {
+        if (!this.localDb) return;
+        try {
+            const rows = await this.queryOnTurso(`SELECT * FROM "${tableName}"`);
+            
+            this.localDb.run("PRAGMA foreign_keys = OFF;");
+            this.localDb.run(`DELETE FROM "${tableName}";`);
+            
+            if (rows && rows.length > 0) {
+                const cols = Object.keys(rows[0]);
+                const placeholders = cols.map(() => '?').join(', ');
+                const insertSql = `INSERT INTO "${tableName}" (${cols.map(c => `"${c}"`).join(', ')}) VALUES (${placeholders})`;
+
+                const stmt = this.localDb.prepare(insertSql);
+                for (const row of rows) {
+                    const vals = cols.map(c => row[c]);
+                    stmt.run(vals);
+                }
+                stmt.free();
+            }
+            this.localDb.run("PRAGMA foreign_keys = ON;");
+        } catch (err) {
+            console.warn(`syncTableFromTurso failed for ${tableName}:`, err);
         }
     },
 
@@ -266,6 +303,28 @@ const API = {
                     notes_content TEXT,
                     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                     FOREIGN KEY(folder_id) REFERENCES folders(id) ON DELETE CASCADE
+                );
+            `);
+
+            await this.execute(`
+                CREATE TABLE IF NOT EXISTS attendance_subjects (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    name TEXT NOT NULL,
+                    color TEXT NOT NULL DEFAULT '#8b5cf6',
+                    min_percentage INTEGER NOT NULL DEFAULT 80,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                );
+            `);
+
+            await this.execute(`
+                CREATE TABLE IF NOT EXISTS attendance_records (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    subject_id INTEGER NOT NULL,
+                    date TEXT NOT NULL,
+                    status TEXT NOT NULL CHECK(status IN ('present', 'absent', 'late')),
+                    note TEXT,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY(subject_id) REFERENCES attendance_subjects(id) ON DELETE CASCADE
                 );
             `);
 

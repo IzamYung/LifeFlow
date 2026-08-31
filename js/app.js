@@ -7,7 +7,7 @@ const App = {
         'dashboard': DashboardPage,
         'finance': FinancePage,
         'planner': PlannerPage,
-        'map': MapPage,
+        'attendance': AttendancePage,
         'prayer': PrayerPage,
         'qibla': QiblaPage,
         'settings': SettingsPage,

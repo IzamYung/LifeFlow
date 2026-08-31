@@ -82,6 +82,20 @@ const DashboardPage = {
                         </div>
                     </div>
 
+                    <!-- Attendance Alerts (At Risk Subjects) -->
+                    <div class="card bg-lavender" id="dash-attendance-card" style="cursor:pointer;" onclick="location.hash='#/attendance'">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                            <div class="card-title" style="margin-bottom:0;">Attendance Alerts</div>
+                            <span style="font-size:11px; color:var(--primary); font-weight:700; display:flex; align-items:center; gap:3px;">
+                                View All
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:12px;height:12px;"><polyline points="9 18 15 12 9 6"/></svg>
+                            </span>
+                        </div>
+                        <div class="assignments-stack" id="dash-attendance-list">
+                            <!-- Loaded dynamically -->
+                        </div>
+                    </div>
+
                     <!-- Weekly statistics -->
                     <div class="card bg-lavender" style="grid-column: span 1;">
                         <div class="card-title">Weekly Productivity</div>
@@ -275,6 +289,60 @@ const DashboardPage = {
                         </div>
                     `;
                 }).join('');
+            }
+
+            // Render At-Risk Attendance Alerts (< 80%)
+            const attContainer = document.getElementById('dash-attendance-list');
+            if (attContainer) {
+                let atRiskSubjects = [];
+                try {
+                    const subjects = await API.query("SELECT * FROM attendance_subjects ORDER BY name ASC");
+                    const records  = await API.query("SELECT * FROM attendance_records");
+                    const MIN_PCT = 80;
+
+                    subjects.forEach(subj => {
+                        const recs = records.filter(r => r.subject_id === subj.id);
+                        const total = recs.length;
+                        const attended = recs.filter(r => r.status === 'present' || r.status === 'late').length;
+                        const pct = total > 0 ? Math.round((attended / total) * 100) : null;
+
+                        if (pct !== null && pct < MIN_PCT) {
+                            const needed = Math.ceil((MIN_PCT / 100 * total - attended) / (1 - MIN_PCT / 100));
+                            atRiskSubjects.push({
+                                ...subj,
+                                total,
+                                attended,
+                                pct,
+                                needed: Math.max(1, needed)
+                            });
+                        }
+                    });
+                } catch (attErr) {
+                    console.warn('Attendance metrics fetch on dashboard:', attErr);
+                }
+
+                if (atRiskSubjects.length === 0) {
+                    attContainer.innerHTML = `
+                        <div class="empty-state" style="padding:14px 0; text-align:center;">
+                            <div style="font-size:13px; font-weight:700; color:#10b981;">✅ All Good!</div>
+                            <div style="font-size:11px; color:var(--text-secondary); margin-top:2px;">No subjects currently at risk below 80%.</div>
+                        </div>
+                    `;
+                } else {
+                    attContainer.innerHTML = atRiskSubjects.map(s => `
+                        <div class="assignment-mini-card" style="border-left:3px solid ${s.color || '#f59f00'}; padding:10px 12px; display:flex; align-items:center; justify-content:space-between; gap:8px;">
+                            <div class="assign-info" style="min-width:0;">
+                                <div class="assign-title" style="font-size:13px; font-weight:700; color:var(--text-primary);">${s.name}</div>
+                                <div class="assign-sub" style="font-size:11px; color:#f59f00; font-weight:600; margin-top:2px;">
+                                    ${s.attended}/${s.total} attended • Need ${s.needed} more class${s.needed > 1 ? 'es' : ''} to reach 80%
+                                </div>
+                            </div>
+                            <span class="assign-badge" style="background:rgba(245,159,0,0.15); color:#f59f00; font-weight:800; font-size:12px; padding:4px 8px; border-radius:12px; flex-shrink:0;">
+                                ${s.pct}%
+                            </span>
+                        </div>
+                    `).join('');
+                }
             }
 
             this.drawProductivityChart(assignmentStats);

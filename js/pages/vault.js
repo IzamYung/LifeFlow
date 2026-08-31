@@ -35,6 +35,11 @@ const VaultPage = {
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px;"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
                             + Folder
                         </button>
+
+                        <button class="btn btn-primary" id="vault-add-note-btn" style="display: flex; align-items: center; gap: 6px; padding: 10px 14px; background: linear-gradient(135deg, #8b5cf6, #7c3aed);">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px;"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                            + Note
+                        </button>
                         
                         <button class="btn btn-primary" id="vault-upload-file-btn" style="display: flex; align-items: center; gap: 6px; padding: 10px 14px;">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
@@ -172,23 +177,38 @@ const VaultPage = {
 
         // 2. Render Files List
         html += filteredFiles.map(file => {
-            const isImage = file.type.startsWith('image/');
-            const iconColor = isImage ? '#10b981' : '#3b5bdb';
-            const iconHTML = isImage ? 
-                `<svg viewBox="0 0 24 24" fill="none" stroke="${iconColor}" stroke-width="2" style="width:32px; height:32px; margin-bottom:8px;"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>` :
-                `<svg viewBox="0 0 24 24" fill="none" stroke="${iconColor}" stroke-width="2" style="width:32px; height:32px; margin-bottom:8px;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>`;
+            const isNote   = file.type === 'text/note';
+            const isImage  = !isNote && file.type.startsWith('image/');
+            const iconColor = isNote ? '#8b5cf6' : isImage ? '#10b981' : '#3b5bdb';
 
-            const sizeKB = (file.size / 1024).toFixed(1) + ' KB';
+            let iconHTML;
+            if (isNote) {
+                iconHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="${iconColor}" stroke-width="2" style="width:30px; height:30px; margin-bottom:6px; flex-shrink:0;"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>`;
+            } else if (isImage) {
+                iconHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="${iconColor}" stroke-width="2" style="width:32px; height:32px; margin-bottom:8px;"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>`;
+            } else {
+                iconHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="${iconColor}" stroke-width="2" style="width:32px; height:32px; margin-bottom:8px;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>`;
+            }
+
+            const bottomLabel = isNote
+                ? `<div style="font-size:10px; font-weight:600; color:#8b5cf6; margin-top:4px; opacity:0.85;">Note</div>`
+                : `<div style="font-size:10px; font-weight:600; color:var(--text-tertiary); margin-top:4px;">${(file.size / 1024).toFixed(1)} KB</div>`;
+
+            // Note preview snippet (first ~40 chars of content, escaped)
+            const noteSnippet = isNote && file.notes_content
+                ? `<div style="font-size:10px; color:var(--text-secondary); overflow:hidden; white-space:nowrap; text-overflow:ellipsis; width:100%; opacity:0.75; margin-top:2px;">${file.notes_content.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').slice(0, 45)}</div>`
+                : '';
 
             return `
                 <div class="card ripple-container" 
-                     style="padding: 12px; display: flex; flex-direction: column; align-items: center; justify-content: space-between; text-align: center; height: 110px; cursor: pointer; border-bottom: 3px solid ${iconColor};"
+                     style="padding: 12px; display: flex; flex-direction: column; align-items: center; justify-content: space-between; text-align: center; height: 120px; cursor: pointer; border-bottom: 3px solid ${iconColor}; position:relative;"
                      onclick="VaultPage.showFileDetails(${JSON.stringify(file).replace(/"/g, '&quot;')})">
                     <div style="display: flex; flex-direction: column; align-items: center; overflow: hidden; width: 100%;">
                         ${iconHTML}
                         <div style="font-size: 12px; font-weight: 700; color: var(--text-primary); text-overflow: ellipsis; overflow: hidden; white-space: nowrap; width: 100%;">${file.name}</div>
+                        ${noteSnippet}
                     </div>
-                    <div style="font-size: 10px; font-weight: 600; color: var(--text-tertiary); margin-top: 4px;">${sizeKB}</div>
+                    ${bottomLabel}
                 </div>
             `;
         }).join('');
@@ -256,6 +276,13 @@ const VaultPage = {
 
     showFileDetails(file) {
         const t = file.type || '';
+
+        // ── Text Note — special dedicated view ───────────────────────────────
+        if (t === 'text/note') {
+            this._showNoteDetails(file);
+            return;
+        }
+
         const isImage  = t.startsWith('image/');
         const isVideo  = t.startsWith('video/');
         const isAudio  = t.startsWith('audio/');
@@ -873,6 +900,139 @@ const VaultPage = {
     },
 
 
+    // ── Render note body: linkify URLs, preserve newlines ──────────────────
+    _renderNoteContent(text) {
+        if (!text) return '<span style="opacity:0.4; font-style:italic;">No content.</span>';
+        const urlRegex = /(\bhttps?:\/\/[^\s<>"]+)/gi;
+        // Escape HTML entities first
+        const escaped = text
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;');
+        // Linkify — keep tag on ONE line so the \n→<br> step below doesn't inject <br> inside the attribute string
+        const linked = escaped.replace(urlRegex, (url) =>
+            `<a href="${url}" target="_blank" rel="noopener noreferrer" style="color:var(--primary); font-weight:600; word-break:break-all; text-decoration:underline;">${url}</a>`
+        );
+        // Convert newlines to <br> (only hits actual content newlines now, not tag internals)
+        return linked.replace(/\n/g, '<br>');
+    },
+
+    // ── Note detail modal ──────────────────────────────────────────────────
+    _showNoteDetails(file) {
+        const formattedDate = new Date(file.created_at).toLocaleDateString([], {
+            month: 'short', day: 'numeric', year: 'numeric',
+            hour: '2-digit', minute: '2-digit'
+        });
+
+        const bodyHtml = this._renderNoteContent(file.notes_content);
+
+        const html = `
+            <div style="display:flex; flex-direction:column; gap:14px;">
+
+                <!-- Note content -->
+                <div style="background:var(--surface-variant); border-radius:var(--radius-md); padding:16px; border:1px solid var(--border-color); min-height:80px; font-size:14px; color:var(--text-primary); line-height:1.7; word-break:break-word;">
+                    ${bodyHtml}
+                </div>
+
+                <!-- Meta -->
+                <div style="font-size:11px; color:var(--text-tertiary); display:flex; align-items:center; gap:6px;">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px;"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                    ${formattedDate}
+                </div>
+
+                <!-- Actions -->
+                <button class="btn btn-primary" id="btn-edit-note" style="padding:11px 0; font-size:13px; background:linear-gradient(135deg,#8b5cf6,#7c3aed);">
+                    ✏️ Edit Note
+                </button>
+                <button class="btn btn-danger" id="btn-delete-note" style="padding:11px 0; font-size:13px;">
+                    🗑 Delete Note
+                </button>
+                <button class="btn btn-secondary" onclick="Modal.close()" style="padding:11px 0; font-size:13px;">Cancel</button>
+            </div>
+        `;
+
+        Modal.open(file.name, html, (container) => {
+            container.querySelector('#btn-edit-note')?.addEventListener('click', () => {
+                Modal.close();
+                this.showAddNoteModal(file);
+            });
+            container.querySelector('#btn-delete-note')?.addEventListener('click', async () => {
+                if (confirm(`Delete note "${file.name}"?`)) {
+                    Modal.close();
+                    try {
+                        await API.execute('DELETE FROM files WHERE id = ?', [file.id]);
+                        await this.loadVaultData();
+                    } catch (err) {
+                        alert('Delete failed: ' + err.message);
+                    }
+                }
+            });
+        });
+    },
+
+    // ── Add / Edit note modal ──────────────────────────────────────────────
+    showAddNoteModal(existingNote = null) {
+        const isEdit   = !!existingNote;
+        const title    = isEdit ? existingNote.name           : '';
+        const content  = isEdit ? (existingNote.notes_content || '') : '';
+
+        const html = `
+            <form id="form-vault-note" class="settings-form" style="display:flex; flex-direction:column; gap:14px;">
+
+                <div class="form-group">
+                    <label for="note-title">Title</label>
+                    <input type="text" id="note-title" placeholder="e.g. Study Links, Class Notes..."
+                        value="${title.replace(/"/g, '&quot;')}" required
+                        style="padding:12px; border-radius:var(--radius-sm); border:1px solid var(--border-color); background:var(--surface-variant); color:var(--text-primary); font-size:14px; width:100%; box-sizing:border-box;">
+                </div>
+
+                <div class="form-group">
+                    <label for="note-content">Content</label>
+                    <textarea id="note-content" placeholder="Write anything... paste links here too — they'll be tappable!"
+                        rows="7"
+                        style="padding:12px; border-radius:var(--radius-sm); border:1px solid var(--border-color); background:var(--surface-variant); color:var(--text-primary); font-size:13px; width:100%; box-sizing:border-box; resize:vertical; line-height:1.6;">${content.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</textarea>
+                    <div style="font-size:11px; color:var(--text-tertiary); margin-top:4px;">💡 URLs are automatically made clickable when viewing.</div>
+                </div>
+
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" onclick="Modal.close()">Cancel</button>
+                    <button type="submit" class="btn btn-primary" style="background:linear-gradient(135deg,#8b5cf6,#7c3aed);">
+                        ${isEdit ? '💾 Save Changes' : '➕ Add Note'}
+                    </button>
+                </div>
+            </form>
+        `;
+
+        Modal.open(isEdit ? 'Edit Note' : 'New Note', html, (container) => {
+            const form = container.querySelector('#form-vault-note');
+            form?.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const noteTitle   = container.querySelector('#note-title').value.trim();
+                const noteContent = container.querySelector('#note-content').value;
+
+                if (!noteTitle) return;
+
+                try {
+                    if (isEdit) {
+                        await API.execute(
+                            'UPDATE files SET name = ?, notes_content = ? WHERE id = ?',
+                            [noteTitle, noteContent, existingNote.id]
+                        );
+                    } else {
+                        await API.execute(
+                            'INSERT INTO files (name, type, folder_id, size, notes_content) VALUES (?, ?, ?, ?, ?)',
+                            [noteTitle, 'text/note', this.currentFolderId, 0, noteContent]
+                        );
+                    }
+                    Modal.close();
+                    await this.loadVaultData();
+                } catch (err) {
+                    alert('Failed to save note: ' + err.message);
+                }
+            });
+        });
+    },
+
     bindEvents() {
 
         // Search Filter input keyup
@@ -898,6 +1058,14 @@ const VaultPage = {
         if (newFolderBtn) {
             newFolderBtn.addEventListener('click', () => {
                 this.showNewFolderModal();
+            });
+        }
+
+        // Add Note button
+        const addNoteBtn = document.getElementById('vault-add-note-btn');
+        if (addNoteBtn) {
+            addNoteBtn.addEventListener('click', () => {
+                this.showAddNoteModal();
             });
         }
 

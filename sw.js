@@ -22,16 +22,13 @@ const ASSETS = [
     './js/pages/assignment.js',
     './js/pages/dashboard.js',
     './js/pages/finance.js',
-    './js/pages/map.js',
+    './js/pages/attendance.js',
     './js/pages/planner.js',
     './js/pages/prayer.js',
     './js/pages/qibla.js',
     './js/pages/schedule.js',
     './js/pages/settings.js',
-    './js/pages/vault.js',
-    // Leaflet CDNs cache fallbacks can also go here or handled dynamically
-    'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css',
-    'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'
+    './js/pages/vault.js'
 ];
 
 // Helper to format local date string YYYY-MM-DD HH:MM:SS in the client timezone
