@@ -77,58 +77,58 @@
 }
 
 [data-theme="dark"] {
-    --bg-main: #0f0f0f;
-    --bg-color: #0f0f0f;
-    --surface-color: #1e1e1e;
-    --surface-rgb: 30, 30, 30;
-    --surface-variant: #2a2a2a;
-    --surface-elevated: #252525;
+    --bg-main: #000000;
+    --bg-color: #000000;
+    --surface-color: #0c0c0e;
+    --surface-rgb: 12, 12, 14;
+    --surface-variant: #16161a;
+    --surface-elevated: #111115;
 
-    --bg-cream: #2a2820;
-    --bg-lavender: #252230;
-    --bg-mint: #1f2a28;
+    --bg-cream: #14120a;
+    --bg-lavender: #12101e;
+    --bg-mint: #0a1614;
 
-    --primary: #6c63ff;
-    --primary-rgb: 108, 99, 255;
-    --primary-hover: #7d75ff;
-    --primary-container: #2a2840;
+    --primary: #7c73ff;
+    --primary-rgb: 124, 115, 255;
+    --primary-hover: #8f87ff;
+    --primary-container: #1e1b38;
     --on-primary: #ffffff;
-    --on-primary-container: #c4c0ff;
+    --on-primary-container: #d6d3ff;
 
     --secondary: #00d4aa;
     --secondary-rgb: 0, 212, 170;
-    --secondary-container: #1a3330;
+    --secondary-container: #0d2622;
     --on-secondary-container: #5eecc8;
 
     --error: #f87171;
-    --error-container: #3b2020;
+    --error-container: #2c1414;
     --on-error-container: #fca5a5;
 
     --warning: #fbbf24;
-    --warning-container: #3b3018;
+    --warning-container: #2c220d;
     --on-warning-container: #fde68a;
 
     --success: #34d399;
-    --success-container: #1a3328;
+    --success-container: #0d261c;
     --on-success-container: #6ee7b7;
 
-    --text-primary: #f0f0f5;
-    --text-secondary: #a0a0b8;
-    --text-tertiary: #6b6b80;
+    --text-primary: #f8f8fc;
+    --text-secondary: #a2a2ba;
+    --text-tertiary: #6e6e84;
 
-    --border-color: rgba(255, 255, 255, 0.08);
-    --border-strong: rgba(255, 255, 255, 0.12);
-    --border-focus: #6c63ff;
-    --shadow-color: rgba(0, 0, 0, 0.4);
+    --border-color: rgba(255, 255, 255, 0.10);
+    --border-strong: rgba(255, 255, 255, 0.16);
+    --border-focus: #7c73ff;
+    --shadow-color: rgba(0, 0, 0, 0.6);
 
-    --card-shadow: 0 2px 8px rgba(0, 0, 0, 0.3), 0 1px 2px rgba(0, 0, 0, 0.2);
-    --card-shadow-hover: 0 8px 24px rgba(0, 0, 0, 0.4), 0 2px 6px rgba(0, 0, 0, 0.2);
-    --modal-shadow: 0 -4px 32px rgba(0, 0, 0, 0.5);
-    --glow-shadow: 0 0 24px rgba(108, 99, 255, 0.25);
+    --card-shadow: 0 2px 8px rgba(0, 0, 0, 0.6), 0 1px 2px rgba(0, 0, 0, 0.5);
+    --card-shadow-hover: 0 8px 24px rgba(0, 0, 0, 0.8), 0 2px 6px rgba(0, 0, 0, 0.5);
+    --modal-shadow: 0 -4px 32px rgba(0, 0, 0, 0.85);
+    --glow-shadow: 0 0 24px rgba(124, 115, 255, 0.35);
 
-    --overlay: rgba(0, 0, 0, 0.6);
+    --overlay: rgba(0, 0, 0, 0.78);
 
-    --safe-area-bg: #0f0f0f;
+    --safe-area-bg: #000000;
 }
 
 /* Global Reset */

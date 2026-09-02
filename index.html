@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <meta name="theme-color" content="#0f0f0f" media="(prefers-color-scheme: dark)">
+    <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
     <meta name="theme-color" content="#f5f6fa" media="(prefers-color-scheme: light)">
     <title>UniFlow</title>
     <!-- CSS Modules -->
-    <link rel="stylesheet" href="css/main.css">
-    <link rel="stylesheet" href="css/components.css">
+    <link rel="stylesheet" href="css/main.css?v=12">
+    <link rel="stylesheet" href="css/components.css?v=12">
     <link rel="stylesheet" href="css/auth.css">
     <link rel="stylesheet" href="css/dashboard.css">
     <link rel="stylesheet" href="css/finance.css">
@@ -257,7 +257,7 @@
     <script src="js/pages/attendance.js?v=11"></script>
     <script src="js/pages/prayer.js?v=11"></script>
     <script src="js/pages/qibla.js?v=10"></script>
-    <script src="js/pages/settings.js?v=11"></script>
+    <script src="js/pages/settings.js?v=12"></script>
     <script src="js/pages/vault.js?v=11"></script>
     <script src="js/app.js?v=10"></script>
     <script>
@@ -280,7 +280,7 @@
                     meta.name = 'theme-color';
                     document.head.appendChild(meta);
                 }
-                meta.content = isDark ? '#0f0f0f' : '#f5f6fa';
+                meta.content = isDark ? '#000000' : '#f5f6fa';
             }
 
             var saved = localStorage.getItem(KEY);
