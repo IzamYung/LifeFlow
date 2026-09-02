@@ -103,18 +103,9 @@ const PlannerPage = {
 
         if (this.activeTab === 'schedule') {
             if (subtitle) subtitle.textContent = "Plan courses, exam calendars, and study groups.";
-            
-            // Redirect global FAB click listener to local page reload
-            const fabBtn = document.getElementById('fab-action-schedule');
-            if (fabBtn) fabBtn.onclick = () => Forms.showAddEvent(() => this.renderActiveTab());
-
             await this.loadScheduleTab(subViewport);
         } else {
             if (subtitle) subtitle.textContent = "Track academic deadlines, homework, and tasks.";
-
-            const fabBtn = document.getElementById('fab-action-assignment');
-            if (fabBtn) fabBtn.onclick = () => Forms.showAddAssignment(() => this.renderActiveTab());
-
             await this.loadAssignmentTab(subViewport);
         }
     },
@@ -174,8 +165,15 @@ const PlannerPage = {
     async loadEventsData() {
         const year = this.schedCurrentDate.getFullYear();
         const month = this.schedCurrentDate.getMonth();
-        const startDay = new Date(year, month - 1, 20).toISOString().split('T')[0] + " 00:00:00";
-        const endDay = new Date(year, month + 2, 10).toISOString().split('T')[0] + " 23:59:59";
+
+        // Helper: local YYYY-MM-DD from a Date object (avoids UTC shift for MYT UTC+8)
+        const localDateStr = (dt) =>
+            dt.getFullYear() + '-' +
+            String(dt.getMonth() + 1).padStart(2, '0') + '-' +
+            String(dt.getDate()).padStart(2, '0');
+
+        const startDay = localDateStr(new Date(year, month - 1, 20)) + ' 00:00:00';
+        const endDay   = localDateStr(new Date(year, month + 2, 10)) + ' 23:59:59';
 
         try {
             let sql = "SELECT id, title, type, location, start_time, end_time, description, recurrence, color FROM schedule WHERE start_time >= ? AND end_time <= ?";
@@ -223,8 +221,11 @@ const PlannerPage = {
         const today = new Date();
         for (let day = 1; day <= totalDays; day++) {
             const tempDate = new Date(year, month, day);
-            const dateStr = tempDate.toISOString().split('T')[0];
-            
+            // Build local date string (YYYY-MM-DD) — avoids UTC shift for MYT (UTC+8)
+            const dateStr = year + '-' +
+                String(month + 1).padStart(2, '0') + '-' +
+                String(day).padStart(2, '0');
+
             const isToday = today.toDateString() === tempDate.toDateString() ? 'today' : '';
             const isSelected = this.schedSelectedDate.toDateString() === tempDate.toDateString() ? 'selected' : '';
 
@@ -253,7 +254,12 @@ const PlannerPage = {
         const header = document.getElementById('agenda-date-header');
         if (!timelineList || !header) return;
 
-        const dateStr = this.schedSelectedDate.toISOString().split('T')[0];
+        // Use local date string (YYYY-MM-DD) to avoid UTC timezone shift (Malaysia UTC+8)
+        const d = this.schedSelectedDate;
+        const dateStr = d.getFullYear() + '-' +
+            String(d.getMonth() + 1).padStart(2, '0') + '-' +
+            String(d.getDate()).padStart(2, '0');
+
         const options = { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' };
         header.textContent = `Agenda for ${this.schedSelectedDate.toLocaleDateString('en-US', options)}`;
 

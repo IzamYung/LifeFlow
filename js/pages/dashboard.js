@@ -24,27 +24,9 @@ const DashboardPage = {
                     </div>
                 </div>
 
-                <!-- Quick Action grid -->
-                <div class="actions-grid">
-                    <div class="action-btn ripple-container" id="dash-action-trans">
-                        <div class="icon-box" style="background:var(--primary);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:20px; height:20px;"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg></div>
-                        <span>Add Expense</span>
-                    </div>
-                    <div class="action-btn ripple-container" id="dash-action-event">
-                        <div class="icon-box" style="background:var(--secondary);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:20px; height:20px;"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div>
-                        <span>Add Class</span>
-                    </div>
-                    <div class="action-btn ripple-container" id="dash-action-assign">
-                        <div class="icon-box" style="background:var(--warning);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:20px; height:20px;"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg></div>
-                        <span>Add Task</span>
-                    </div>
-                    <div class="action-btn ripple-container" id="dash-action-settings">
-                        <div class="icon-box" style="background:var(--success);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:20px; height:20px;"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></div>
-                        <span>Settings</span>
-                    </div>
-                </div>
 
                 <!-- Main dashboard summary layouts -->
+
                 <div class="dashboard-grid">
                     <!-- Finance Card -->
                     <div class="card bg-cream ripple-container" onclick="location.hash='#/finance'">
@@ -211,33 +193,39 @@ const DashboardPage = {
             let greeting = 'Good evening';
             if (hour < 12) greeting = 'Good morning';
             else if (hour < 18) greeting = 'Good afternoon';
-            document.getElementById('greeting-title').textContent = `${greeting}, ${name.split(' ')[0]}`;
+            const greetingEl = document.getElementById('greeting-title');
+            if (greetingEl) greetingEl.textContent = `${greeting}, ${name.split(' ')[0]}`;
 
             // Current date
             const options = { weekday: 'long', month: 'short', day: 'numeric', year: 'numeric' };
-            document.getElementById('dashboard-date').textContent = new Date().toLocaleDateString('en-US', options);
+            const dateEl = document.getElementById('dashboard-date');
+            if (dateEl) dateEl.textContent = new Date().toLocaleDateString('en-US', options);
 
             // Animate counter balance
-            this.animateCounter(document.getElementById('dash-balance'), totalBalance, '$');
+            const balanceEl = document.getElementById('dash-balance');
+            if (balanceEl) this.animateCounter(balanceEl, totalBalance, '$');
 
             // Budget percent
             const monthlyBudget = parseFloat(settings.monthly_budget || 500);
             const budgetPercent = monthlyBudget > 0 ? Math.round((monthlyExpense / monthlyBudget) * 100) : 0;
             const budgetInfo = document.getElementById('dash-budget-info');
             const budgetPercentText = document.getElementById('dash-budget-percent');
-            budgetPercentText.textContent = `${budgetPercent}% of monthly budget spent`;
+            if (budgetPercentText) budgetPercentText.textContent = `${budgetPercent}% of monthly budget spent`;
             
-            if (budgetPercent > 90) {
-                budgetInfo.className = 'stat-trend trend-down';
-            } else {
-                budgetInfo.className = 'stat-trend trend-up';
+            if (budgetInfo) {
+                if (budgetPercent > 90) {
+                    budgetInfo.className = 'stat-trend trend-down';
+                } else {
+                    budgetInfo.className = 'stat-trend trend-up';
+                }
             }
 
             // Render agenda items
             const agendaContainer = document.getElementById('dash-agenda-list');
-            if (todayEvents.length === 0) {
-                agendaContainer.innerHTML = `
-                    <div class="empty-state">
+            if (agendaContainer) {
+                if (todayEvents.length === 0) {
+                    agendaContainer.innerHTML = `
+                        <div class="empty-state">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
                         <h5>No lectures today!</h5>
                         <p>Your calendar is completely clear for today.</p>
@@ -261,34 +249,37 @@ const DashboardPage = {
                         </div>
                     `;
                 }).join('');
+                }
             }
 
             // Render upcoming assignments
             const assignContainer = document.getElementById('dash-assignments-list');
-            if (upcomingAssignments.length === 0) {
-                assignContainer.innerHTML = `
-                    <div class="empty-state">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-                        <h5>All caught up!</h5>
-                        <p>No upcoming assignments or tests due soon.</p>
-                    </div>
-                `;
-            } else {
-                assignContainer.innerHTML = upcomingAssignments.map(as => {
-                    const daysLeft = Math.ceil(as.seconds_left / 86400);
-                    const daysText = daysLeft <= 0 ? 'Due today' : `Due in ${daysLeft} day${daysLeft > 1 ? 's' : ''}`;
-                    const warningClass = daysLeft <= 2 ? 'due-soon' : '';
-
-                    return `
-                        <div class="assignment-mini-card ripple-container" onclick="Forms.showAssignmentDetail(${JSON.stringify(as).replace(/"/g, '&quot;')}, () => DashboardPage.loadDashboardData())">
-                            <div class="assign-info">
-                                <div class="assign-title">${as.title}</div>
-                                <div class="assign-sub">${as.subject} • <span class="${warningClass}" style="font-weight:600;">${daysText}</span></div>
-                            </div>
-                            <span class="assign-badge priority-badge ${as.priority}">${as.priority}</span>
+            if (assignContainer) {
+                if (upcomingAssignments.length === 0) {
+                    assignContainer.innerHTML = `
+                        <div class="empty-state">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                            <h5>All caught up!</h5>
+                            <p>No upcoming assignments or tests due soon.</p>
                         </div>
                     `;
-                }).join('');
+                } else {
+                    assignContainer.innerHTML = upcomingAssignments.map(as => {
+                        const daysLeft = Math.ceil(as.seconds_left / 86400);
+                        const daysText = daysLeft <= 0 ? 'Due today' : `Due in ${daysLeft} day${daysLeft > 1 ? 's' : ''}`;
+                        const warningClass = daysLeft <= 2 ? 'due-soon' : '';
+
+                        return `
+                            <div class="assignment-mini-card ripple-container" onclick="Forms.showAssignmentDetail(${JSON.stringify(as).replace(/"/g, '&quot;')}, () => DashboardPage.loadDashboardData())">
+                                <div class="assign-info">
+                                    <div class="assign-title">${as.title}</div>
+                                    <div class="assign-sub">${as.subject} • <span class="${warningClass}" style="font-weight:600;">${daysText}</span></div>
+                                </div>
+                                <span class="assign-badge priority-badge ${as.priority}">${as.priority}</span>
+                            </div>
+                        `;
+                    }).join('');
+                }
             }
 
             // Render At-Risk Attendance Alerts (< 80%)

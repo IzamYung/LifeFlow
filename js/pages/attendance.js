@@ -3,7 +3,9 @@
 const AttendancePage = {
     subjects: [],
     records: [],
-    filter: 'all', // 'all' | 'at-risk' | 'good'
+    scheduleClasses: [],
+    unmarkedSessions: [],
+    filter: 'all', // 'all' | 'unmarked' | 'at-risk' | 'good'
     MIN_PCT: 80,
 
     async render(container) {
@@ -18,13 +20,9 @@ const AttendancePage = {
                             <p>Track your class attendance</p>
                         </div>
                         <div style="display:flex; align-items:center; gap:8px; flex-shrink:0;">
-                            <button class="btn btn-secondary" id="att-manage-btn" style="padding:8px 12px; font-size:13px; display:flex; align-items:center; gap:6px;">
+                            <button class="btn btn-secondary" id="att-manage-btn" style="padding:8px 14px; font-size:13px; display:flex; align-items:center; gap:6px;">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
-                                Manage
-                            </button>
-                            <button class="btn btn-primary" id="att-mark-btn" style="padding:8px 14px; font-size:13px; display:flex; align-items:center; gap:6px; background:linear-gradient(135deg,#8b5cf6,#7c3aed);">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:14px;height:14px;"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
-                                Mark
+                                Manage Subjects
                             </button>
                         </div>
                     </div>
@@ -50,11 +48,15 @@ const AttendancePage = {
                         </div>
                     </div>
 
-                    <!-- Filter Tabs -->
-                    <div style="display:flex; gap:8px; margin-bottom:12px; overflow-x:auto; padding-bottom:2px;">
+                    <!-- Filter Tabs with dedicated Unmarked Pill -->
+                    <div style="display:flex; gap:8px; margin-bottom:12px; overflow-x:auto; padding-bottom:2px;" id="att-filter-tabs-bar">
                         <button class="att-filter-btn active" data-filter="all"
                             style="padding:7px 15px;border-radius:20px;border:1px solid var(--primary);background:var(--primary);color:#fff;font-size:12px;font-weight:700;white-space:nowrap;cursor:pointer;">
                             All Subjects
+                        </button>
+                        <button class="att-filter-btn" id="att-unmarked-filter-btn" data-filter="unmarked"
+                            style="display:none; padding:7px 14px;border-radius:20px;border:1px solid rgba(139,92,246,0.5);background:rgba(139,92,246,0.12);color:var(--primary);font-size:12px;font-weight:700;white-space:nowrap;cursor:pointer;">
+                            ⚡ Unmarked (0)
                         </button>
                         <button class="att-filter-btn" data-filter="at-risk"
                             style="padding:7px 15px;border-radius:20px;border:1px solid var(--border-color);background:transparent;color:var(--text-secondary);font-size:12px;font-weight:700;white-space:nowrap;cursor:pointer;">
@@ -67,7 +69,7 @@ const AttendancePage = {
                     </div>
                 </div>
 
-                <!-- Scrollable Subject List -->
+                <!-- Scrollable Subject List & Views -->
                 <div id="att-subject-list" style="flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch; display:flex; flex-direction:column; gap:12px; padding-bottom:calc(var(--bottom-nav-height) + 30px); min-height:0;">
                     <!-- Rendered dynamically -->
                 </div>
@@ -86,24 +88,170 @@ const AttendancePage = {
     async loadData() {
         try {
             this.subjects = await API.query('SELECT * FROM attendance_subjects ORDER BY name ASC');
-            this.records  = await API.query('SELECT * FROM attendance_records ORDER BY date DESC');
+            this.records  = await API.query('SELECT * FROM attendance_records ORDER BY date DESC, id DESC');
+            this.scheduleClasses = await API.query("SELECT * FROM schedule WHERE type = 'class' ORDER BY start_time ASC");
         } catch (err) {
             console.error('Attendance load failed:', err);
             this.subjects = [];
             this.records  = [];
+            this.scheduleClasses = [];
         }
+
+        this.computeUnmarkedSessions();
+        this.updateFilterPillBadge();
         this.renderSummary();
         this.renderSubjects();
     },
 
-    // ── Stats helpers ──────────────────────────────────────────────────────
+    // ── Compute Unmarked Sessions from Past Timetable Schedule ───────────────
+    computeUnmarkedSessions() {
+        if (!this.subjects || this.subjects.length === 0 || !this.scheduleClasses || this.scheduleClasses.length === 0) {
+            this.unmarkedSessions = [];
+            return;
+        }
+
+        const now = new Date();
+        const sessions = [];
+
+        this.scheduleClasses.forEach(sched => {
+            if (!sched.start_time) return;
+            const startDT = new Date(sched.start_time.replace(' ', 'T'));
+            if (isNaN(startDT.getTime())) return;
+
+            // Only include past or currently active class sessions (start_time <= now)
+            if (startDT > now) return;
+
+            // Match subject by name
+            const schedTitle = (sched.title || '').trim().toLowerCase();
+            const matchedSubj = this.subjects.find(s => {
+                const sName = s.name.trim().toLowerCase();
+                return sName === schedTitle || schedTitle.includes(sName) || sName.includes(schedTitle);
+            });
+
+            if (!matchedSubj) return;
+
+            const dateISO = sched.start_time.slice(0, 10);
+
+            // Check if already marked for this subject on this date
+            const isMarked = this.records.some(r => {
+                if (r.subject_id !== matchedSubj.id) return false;
+                if (r.date === dateISO || r.date.startsWith(dateISO)) return true;
+                return false;
+            });
+
+            if (!isMarked) {
+                let timeStr = '';
+                let durationHrs = 2.0;
+                try {
+                    const endDT = new Date((sched.end_time || '').replace(' ', 'T'));
+                    const sTime = startDT.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                    const eTime = !isNaN(endDT.getTime()) ? endDT.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+                    timeStr = eTime ? `${sTime} - ${eTime}` : sTime;
+                    if (!isNaN(endDT.getTime()) && endDT > startDT) {
+                        durationHrs = Math.max(0.5, Math.round(((endDT - startDT) / 3600000) * 100) / 100);
+                    }
+                } catch (e) {
+                    timeStr = sched.start_time.slice(11, 16);
+                }
+
+                // Relative date text
+                const todayStr = now.toISOString().slice(0, 10);
+                const yesterday = new Date(now.getTime() - 86400000);
+                const yesterdayStr = yesterday.toISOString().slice(0, 10);
+
+                let dateLabel = '';
+                if (dateISO === todayStr) {
+                    dateLabel = 'Today';
+                } else if (dateISO === yesterdayStr) {
+                    dateLabel = 'Yesterday';
+                } else {
+                    dateLabel = startDT.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+                }
+
+                sessions.push({
+                    scheduleId: sched.id,
+                    subjectId: matchedSubj.id,
+                    subjectName: matchedSubj.name,
+                    subjectColor: matchedSubj.color || '#8b5cf6',
+                    dateISO,
+                    dateLabel,
+                    timeStr,
+                    durationHrs,
+                    location: sched.location || '',
+                    rawStartTime: startDT.getTime()
+                });
+            }
+        });
+
+        // Sort descending (most recent first)
+        sessions.sort((a, b) => b.rawStartTime - a.rawStartTime);
+        this.unmarkedSessions = sessions;
+    },
+
+    updateFilterPillBadge() {
+        const btn = document.getElementById('att-unmarked-filter-btn');
+        if (!btn) return;
+        const count = this.unmarkedSessions.length;
+        if (count > 0) {
+            btn.style.display = 'inline-flex';
+            btn.textContent = `⚡ Unmarked (${count})`;
+        } else {
+            btn.style.display = 'none';
+            if (this.filter === 'unmarked') {
+                this.filter = 'all';
+                document.querySelectorAll('.att-filter-btn').forEach(b => {
+                    b.classList.remove('active');
+                    b.style.background = 'transparent';
+                    b.style.color = 'var(--text-secondary)';
+                    b.style.borderColor = 'var(--border-color)';
+                });
+                const allBtn = document.querySelector('.att-filter-btn[data-filter="all"]');
+                if (allBtn) {
+                    allBtn.classList.add('active');
+                    allBtn.style.background = 'var(--primary)';
+                    allBtn.style.color = '#ffffff';
+                    allBtn.style.borderColor = 'var(--primary)';
+                }
+            }
+        }
+    },
+
+    // ── Stats helpers with Exact Contact Hours Weighting ────────────────────
     getStats(subjectId) {
-        const recs     = this.records.filter(r => r.subject_id === subjectId);
-        const total    = recs.length;
-        const attended = recs.filter(r => r.status === 'present' || r.status === 'late').length;
-        const absent   = recs.filter(r => r.status === 'absent').length;
-        const pct      = total > 0 ? Math.round((attended / total) * 100) : null;
-        return { total, attended, absent, pct };
+        const recs = this.records.filter(r => r.subject_id === subjectId);
+        const total = recs.length;
+        if (total === 0) return { total: 0, attended: 0, absent: 0, pct: null };
+
+        let earnedUnits = 0;
+        let attendedCount = 0;
+        let absentCount = 0;
+
+        recs.forEach(r => {
+            if (r.status === 'present') {
+                earnedUnits += 1.0;
+                attendedCount++;
+            } else if (r.status === 'late') {
+                attendedCount++;
+                // Check if note has exact hours (e.g. Attended 1.50/2.00 hrs)
+                const match = (r.note || '').match(/Attended\s+([\d.]+)\/([\d.]+)\s*hrs/i);
+                if (match) {
+                    const attendedHrs = parseFloat(match[1]);
+                    const totalHrs = parseFloat(match[2]);
+                    if (totalHrs > 0) {
+                        earnedUnits += Math.min(1.0, attendedHrs / totalHrs);
+                    } else {
+                        earnedUnits += 0.75;
+                    }
+                } else {
+                    earnedUnits += 0.75; // Standard 75% for late
+                }
+            } else if (r.status === 'absent') {
+                absentCount++;
+            }
+        });
+
+        const pct = Math.round((earnedUnits / total) * 100);
+        return { total, attended: attendedCount, absent: absentCount, pct };
     },
 
     // ── Overall summary ────────────────────────────────────────────────────
@@ -122,9 +270,32 @@ const AttendancePage = {
             return;
         }
 
-        const allTotal    = this.records.length;
-        const allAttended = this.records.filter(r => r.status === 'present' || r.status === 'late').length;
-        const overallPct  = allTotal > 0 ? Math.round((allAttended / allTotal) * 100) : null;
+        const allTotal = this.records.length;
+        let allEarned = 0;
+        let allAttended = 0;
+
+        this.records.forEach(r => {
+            if (r.status === 'present') {
+                allEarned += 1.0;
+                allAttended++;
+            } else if (r.status === 'late') {
+                allAttended++;
+                const match = (r.note || '').match(/Attended\s+([\d.]+)\/([\d.]+)\s*hrs/i);
+                if (match) {
+                    const attendedHrs = parseFloat(match[1]);
+                    const totalHrs = parseFloat(match[2]);
+                    if (totalHrs > 0) {
+                        allEarned += Math.min(1.0, attendedHrs / totalHrs);
+                    } else {
+                        allEarned += 0.75;
+                    }
+                } else {
+                    allEarned += 0.75;
+                }
+            }
+        });
+
+        const overallPct = allTotal > 0 ? Math.round((allEarned / allTotal) * 100) : null;
 
         if (overallPct === null) {
             pctEl.textContent   = '--%';
@@ -146,10 +317,28 @@ const AttendancePage = {
         countEl.textContent = `${allAttended} attended · ${allTotal - allAttended} absent · ${allTotal} total classes`;
     },
 
-    // ── Subject cards ──────────────────────────────────────────────────────
+    // ── Render Subjects & Views ─────────────────────────────────────────────
     renderSubjects() {
         const list = document.getElementById('att-subject-list');
         if (!list) return;
+
+        let html = '';
+
+        // If Unmarked filter is selected: Render Unmarked Queue View
+        if (this.filter === 'unmarked') {
+            if (this.unmarkedSessions.length === 0) {
+                list.innerHTML = `
+                    <div class="empty-state" style="padding:50px 16px;">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" style="width:48px;height:48px;opacity:0.5;"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+                        <h5>All Classes Marked! 🎉</h5>
+                        <p>You have no pending unmarked class sessions.</p>
+                    </div>
+                `;
+                return;
+            }
+            list.innerHTML = this._unmarkedSessionsHTML();
+            return;
+        }
 
         let filtered = this.subjects;
         if (this.filter === 'at-risk') {
@@ -165,17 +354,18 @@ const AttendancePage = {
         }
 
         if (filtered.length === 0) {
-            list.innerHTML = `
+            html += `
                 <div class="empty-state" style="padding:50px 16px;">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" style="width:48px;height:48px;opacity:0.5;"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
                     <h5>${this.subjects.length === 0 ? 'No subjects yet' : 'No subjects in this category'}</h5>
                     <p>${this.subjects.length === 0 ? 'Tap Manage to add your subjects.' : 'Try a different filter.'}</p>
                 </div>
             `;
-            return;
+        } else {
+            html += filtered.map(s => this._subjectCardHTML(s)).join('');
         }
 
-        list.innerHTML = filtered.map(s => this._subjectCardHTML(s)).join('');
+        list.innerHTML = html;
 
         // Bind card taps for history
         list.querySelectorAll('.att-subject-card').forEach(card => {
@@ -185,6 +375,216 @@ const AttendancePage = {
                 if (subj) this.showSubjectHistory(subj);
             });
         });
+    },
+
+    // ── Unmarked Sessions Page HTML ────────────────────────────────────────
+    _unmarkedSessionsHTML() {
+        const count = this.unmarkedSessions.length;
+        const sessionRows = this.unmarkedSessions.map((s, idx) => `
+            <div style="padding:12px 14px; background:var(--surface-color); border-radius:var(--radius-md); border:1px solid var(--border-color); display:flex; flex-direction:column; gap:10px; box-shadow:var(--shadow-sm);">
+                <div style="display:flex; align-items:center; justify-content:space-between; gap:8px;">
+                    <div style="display:flex; align-items:center; gap:8px; min-width:0;">
+                        <div style="width:12px; height:12px; border-radius:50%; background:${s.subjectColor}; flex-shrink:0;"></div>
+                        <span style="font-size:14px; font-weight:800; color:var(--text-primary); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${s.subjectName}</span>
+                    </div>
+                    <span style="font-size:11px; font-weight:700; color:var(--primary); background:rgba(var(--primary-rgb),0.1); padding:3px 10px; border-radius:12px; flex-shrink:0;">${s.dateLabel}</span>
+                </div>
+                <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:wrap;">
+                    <div style="font-size:12px; color:var(--text-secondary); display:flex; align-items:center; gap:4px;">
+                        <span>⏰ ${s.timeStr} (${s.durationHrs.toFixed(2)} hrs)</span>
+                        ${s.location ? `<span style="color:var(--text-tertiary);">• 📍 ${s.location}</span>` : ''}
+                    </div>
+                    <div style="display:flex; gap:6px; margin-left:auto;">
+                        <button onclick="AttendancePage.quickMark(${s.subjectId}, '${s.dateISO}', 'present', '${s.timeStr}', '${s.location}')"
+                            style="background:rgba(16,185,129,0.12); color:#10b981; border:1px solid rgba(16,185,129,0.3); border-radius:8px; padding:6px 12px; font-size:12px; font-weight:700; cursor:pointer;">
+                            ✅ Present
+                        </button>
+                        <button onclick="AttendancePage.showLateHoursModal(${s.subjectId}, '${s.subjectName.replace(/'/g, "\\'")}', '${s.subjectColor}', '${s.dateISO}', '${s.dateLabel}', '${s.timeStr}', '${s.location || ''}', ${s.durationHrs})"
+                            style="background:rgba(245,159,0,0.12); color:#f59f00; border:1px solid rgba(245,159,0,0.3); border-radius:8px; padding:6px 12px; font-size:12px; font-weight:700; cursor:pointer;">
+                            🕐 Late
+                        </button>
+                        <button onclick="AttendancePage.quickMark(${s.subjectId}, '${s.dateISO}', 'absent', '${s.timeStr}', '${s.location}')"
+                            style="background:rgba(239,68,68,0.12); color:#ef4444; border:1px solid rgba(239,68,68,0.3); border-radius:8px; padding:6px 12px; font-size:12px; font-weight:700; cursor:pointer;">
+                            ❌ Absent
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+
+        return `
+            <div style="display:flex; flex-direction:column; gap:12px;">
+                <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; padding:0 2px;">
+                    <div style="display:flex; align-items:center; gap:6px;">
+                        <span style="font-size:16px;">⚡</span>
+                        <span style="font-size:14px; font-weight:800; color:var(--text-primary);">Pending Classes (${count})</span>
+                    </div>
+                    <button onclick="AttendancePage.markAllPendingPresent()"
+                        style="background:linear-gradient(135deg,#8b5cf6,#7c3aed); color:#fff; border:none; border-radius:8px; padding:7px 14px; font-size:12px; font-weight:700; cursor:pointer; box-shadow:0 2px 8px rgba(139,92,246,0.3);">
+                        ✅ Mark All as Present
+                    </button>
+                </div>
+                <div style="display:flex; flex-direction:column; gap:10px;">
+                    ${sessionRows}
+                </div>
+            </div>
+        `;
+    },
+
+    // ── Quick Mark Single Session ───────────────────────────────────────────
+    async quickMark(subjectId, dateISO, status, timeStr = '', location = '') {
+        try {
+            const note = timeStr ? `${timeStr}${location ? ' • ' + location : ''}` : null;
+            await API.execute(
+                'INSERT INTO attendance_records (subject_id, date, status, note) VALUES (?, ?, ?, ?)',
+                [subjectId, dateISO, status, note]
+            );
+            await this.loadData();
+        } catch (err) {
+            alert('Failed to save record: ' + err.message);
+        }
+    },
+
+    // ── Batch Mark All Pending Sessions as Present ──────────────────────────
+    async markAllPendingPresent() {
+        if (!this.unmarkedSessions || this.unmarkedSessions.length === 0) return;
+        try {
+            for (const s of this.unmarkedSessions) {
+                const note = s.timeStr ? `${s.timeStr}${s.location ? ' • ' + s.location : ''}` : null;
+                await API.execute(
+                    'INSERT INTO attendance_records (subject_id, date, status, note) VALUES (?, ?, ?, ?)',
+                    [s.subjectId, s.dateISO, 'present', note]
+                );
+            }
+            await this.loadData();
+        } catch (err) {
+            alert('Failed to mark all sessions: ' + err.message);
+        }
+    },
+
+    // ── TnG-Style 0.00 Keypad Modal for Late / Hours Attended ────────────────
+    showLateHoursModal(subjectId, subjectName, subjectColor, dateISO, dateLabel, timeStr, location = '', maxHours = 2.0, isTransition = false) {
+        let cents = Math.round(maxHours * 75); // Default to 75% of class
+        const maxCents = Math.round(maxHours * 100);
+
+        const html = `
+            <div style="display:flex; flex-direction:column; gap:16px;">
+                <!-- Header Info -->
+                <div style="text-align:center;">
+                    <div style="display:inline-flex; align-items:center; gap:6px; background:rgba(var(--primary-rgb),0.1); padding:4px 12px; border-radius:20px; font-size:12px; font-weight:700; color:var(--primary);">
+                        <span style="width:8px; height:8px; border-radius:50%; background:${subjectColor};"></span>
+                        ${subjectName}
+                    </div>
+                    <div style="font-size:12px; color:var(--text-secondary); margin-top:4px;">
+                        ${dateLabel} • ⏰ ${timeStr} (Duration: ${maxHours.toFixed(2)} hrs)
+                    </div>
+                </div>
+
+                <!-- Big Interactive TnG Hours Display (Triggers Native Mobile Number Keyboard) -->
+                <div id="tng-screen-box"
+                    style="background:var(--surface-variant); border:1.5px solid var(--border-color); border-radius:var(--radius-md); padding:16px 14px; text-align:center; cursor:text; transition:border-color 0.2s ease;">
+                    <div style="font-size:11px; font-weight:700; color:var(--text-tertiary); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px;">HOURS ATTENDED</div>
+                    <div style="display:flex; align-items:baseline; justify-content:center; gap:6px; margin:4px 0;">
+                        <input type="text" inputmode="numeric" id="tng-native-input" value="1.50" autocomplete="off"
+                            style="width:140px; text-align:center; font-size:36px; font-weight:900; font-family:var(--font-heading); color:var(--primary); background:transparent; border:none; outline:none; letter-spacing:-1px; padding:0; margin:0;">
+                        <span style="font-size:15px; font-weight:700; color:var(--text-secondary);">HRS</span>
+                    </div>
+                    <div id="tng-pct-info" style="font-size:12px; font-weight:700; color:#f59f00; margin-top:2px;">
+                        75% of ${maxHours.toFixed(2)} hrs class
+                    </div>
+                </div>
+
+                <!-- Note / Reason Input (Opens Normal Alphabetic Keyboard) -->
+                <div class="form-group" style="margin-bottom:0;">
+                    <label style="font-size:12px; font-weight:700; color:var(--text-secondary); margin-bottom:4px; display:block;">Reason / Note (Optional)</label>
+                    <input type="text" id="tng-reason-input" placeholder="e.g. Late 30 mins (Meeting / Traffic)..." autocomplete="off"
+                        style="font-size:13px; padding:11px 12px; width:100%; box-sizing:border-box; border-radius:var(--radius-sm); border:1px solid var(--border-color); background:var(--surface-color); color:var(--text-primary);">
+                </div>
+
+                <!-- Action Buttons -->
+                <div style="display:flex; gap:10px; margin-top:6px;">
+                    <button type="button" class="btn btn-secondary" onclick="Modal.close()" style="flex:1; padding:12px 0;">Cancel</button>
+                    <button type="button" id="tng-confirm-btn" class="btn btn-primary"
+                        style="flex:2; padding:12px 0; font-size:13.5px; font-weight:800; background:linear-gradient(135deg,#f59f00,#e67700); border:none; box-shadow:0 4px 12px rgba(245,159,0,0.3);">
+                        🕐 Confirm Late (1.50 hrs)
+                    </button>
+                </div>
+            </div>
+        `;
+
+        const bindHandler = (container) => {
+            const screenBox   = container.querySelector('#tng-screen-box');
+            const nativeInput = container.querySelector('#tng-native-input');
+            const pctInfoEl   = container.querySelector('#tng-pct-info');
+            const confirmBtn  = container.querySelector('#tng-confirm-btn');
+            const reasonInput = container.querySelector('#tng-reason-input');
+
+            const updateUI = () => {
+                const hoursStr = (cents / 100).toFixed(2);
+                nativeInput.value = hoursStr;
+                const pct = maxCents > 0 ? Math.round((cents / maxCents) * 100) : 0;
+                pctInfoEl.textContent = `${pct}% of ${maxHours.toFixed(2)} hrs class (${hoursStr} / ${maxHours.toFixed(2)} hrs)`;
+                confirmBtn.textContent = `🕐 Confirm Late (${hoursStr} hrs)`;
+            };
+
+            updateUI();
+
+            // Focus on screen box click
+            screenBox.addEventListener('click', () => {
+                nativeInput.focus();
+            });
+
+            nativeInput.addEventListener('focus', () => {
+                screenBox.style.borderColor = 'var(--primary)';
+                screenBox.style.boxShadow = '0 0 0 3px rgba(var(--primary-rgb),0.15)';
+            });
+
+            nativeInput.addEventListener('blur', () => {
+                screenBox.style.borderColor = 'var(--border-color)';
+                screenBox.style.boxShadow = 'none';
+            });
+
+            // Handle typing on mobile number keyboard (TnG stacking from right)
+            nativeInput.addEventListener('input', (e) => {
+                const rawDigits = nativeInput.value.replace(/\D/g, '');
+                let num = parseInt(rawDigits, 10);
+                if (isNaN(num)) num = 0;
+                cents = Math.min(num, maxCents);
+                updateUI();
+            });
+
+            nativeInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Backspace') {
+                    e.preventDefault();
+                    cents = Math.floor(cents / 10);
+                    updateUI();
+                }
+            });
+
+            // Confirm submit
+            confirmBtn.addEventListener('click', async () => {
+                const hours = (cents / 100).toFixed(2);
+                const reason = reasonInput.value.trim();
+                const note = `Attended ${hours}/${maxHours.toFixed(2)} hrs${reason ? ' • ' + reason : ''}${timeStr ? ' • ' + timeStr : ''}${location ? ' • ' + location : ''}`;
+
+                try {
+                    await API.execute(
+                        'INSERT INTO attendance_records (subject_id, date, status, note) VALUES (?, ?, ?, ?)',
+                        [subjectId, dateISO, 'late', note]
+                    );
+                    Modal.close();
+                    await this.loadData();
+                } catch (err) {
+                    alert('Save failed: ' + err.message);
+                }
+            });
+        };
+
+        if (isTransition) {
+            Modal.transitionTo('Late Attendance Hours', html, bindHandler);
+        } else {
+            Modal.open('Late Attendance Hours', html, bindHandler);
+        }
     },
 
     _subjectCardHTML(subj) {
@@ -231,130 +631,41 @@ const AttendancePage = {
         `;
     },
 
-    // ── Mark Attendance Modal ──────────────────────────────────────────────
-    showMarkModal(preselectedSubjectId = null, isTransition = false) {
-        if (this.subjects.length === 0) {
-            alert('Please add subjects first via the Manage button.');
-            return;
-        }
-
-        const today = new Date().toISOString().slice(0, 10);
-
-        const subjectOptions = this.subjects.map(s =>
-            `<option value="${s.id}" ${preselectedSubjectId === s.id ? 'selected' : ''}>${s.name}</option>`
-        ).join('');
-
-        const html = `
-            <form id="form-mark-att" class="settings-form" style="display:flex;flex-direction:column;gap:14px;">
-                <div class="form-group">
-                    <label for="att-subj-sel">Subject</label>
-                    <select id="att-subj-sel" style="padding:12px;border-radius:var(--radius-sm);border:1px solid var(--border-color);background:var(--surface-variant);color:var(--text-primary);font-size:14px;width:100%;">
-                        ${subjectOptions}
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="att-date-inp">Date</label>
-                    <input type="date" id="att-date-inp" value="${today}"
-                        style="padding:12px;border-radius:var(--radius-sm);border:1px solid var(--border-color);background:var(--surface-variant);color:var(--text-primary);font-size:14px;width:100%;box-sizing:border-box;">
-                </div>
-                <div class="form-group">
-                    <label>Status</label>
-                    <div style="display:flex;gap:10px;">
-                        <label style="flex:1;cursor:pointer;">
-                            <input type="radio" name="att-status" value="present" checked style="display:none;">
-                            <div class="att-status-opt" data-val="present"
-                                style="padding:12px 8px;border-radius:var(--radius-sm);border:2px solid #10b981;background:rgba(16,185,129,0.1);text-align:center;font-weight:700;font-size:13px;color:#10b981;transition:all 0.2s;">
-                                ✅ Present
-                            </div>
-                        </label>
-                        <label style="flex:1;cursor:pointer;">
-                            <input type="radio" name="att-status" value="late" style="display:none;">
-                            <div class="att-status-opt" data-val="late"
-                                style="padding:12px 8px;border-radius:var(--radius-sm);border:2px solid var(--border-color);background:transparent;text-align:center;font-weight:700;font-size:13px;color:var(--text-secondary);transition:all 0.2s;">
-                                🕐 Late
-                            </div>
-                        </label>
-                        <label style="flex:1;cursor:pointer;">
-                            <input type="radio" name="att-status" value="absent" style="display:none;">
-                            <div class="att-status-opt" data-val="absent"
-                                style="padding:12px 8px;border-radius:var(--radius-sm);border:2px solid var(--border-color);background:transparent;text-align:center;font-weight:700;font-size:13px;color:var(--text-secondary);transition:all 0.2s;">
-                                ❌ Absent
-                            </div>
-                        </label>
-                    </div>
-                </div>
-                <div class="form-group">
-                    <label for="att-note-inp">Note (optional)</label>
-                    <input type="text" id="att-note-inp" placeholder="e.g. Medical reason, test day..."
-                        style="padding:12px;border-radius:var(--radius-sm);border:1px solid var(--border-color);background:var(--surface-variant);color:var(--text-primary);font-size:14px;width:100%;box-sizing:border-box;">
-                </div>
-                <div class="form-actions">
-                    <button type="button" class="btn btn-secondary" onclick="Modal.close()">Cancel</button>
-                    <button type="submit" class="btn btn-primary" style="background:linear-gradient(135deg,#8b5cf6,#7c3aed);">Save</button>
-                </div>
-            </form>
-        `;
-
-        const bindHandler = (container) => {
-            // Status pill toggle
-            container.querySelectorAll('.att-status-opt').forEach(opt => {
-                opt.addEventListener('click', () => {
-                    // Reset all
-                    container.querySelectorAll('.att-status-opt').forEach(o => {
-                        o.style.borderColor = 'var(--border-color)';
-                        o.style.background  = 'transparent';
-                        o.style.color       = 'var(--text-secondary)';
-                    });
-                    // Highlight selected
-                    const colors = { present: '#10b981', late: '#f59f00', absent: '#ef4444' };
-                    const val    = opt.dataset.val;
-                    const c      = colors[val];
-                    opt.style.borderColor = c;
-                    opt.style.background  = c + '20';
-                    opt.style.color       = c;
-                    const radio = opt.parentElement.querySelector('input[name="att-status"]');
-                    if (radio) radio.checked = true;
-                });
-            });
-
-            // Form submit
-            container.querySelector('#form-mark-att')?.addEventListener('submit', async (e) => {
-                e.preventDefault();
-                const subjId  = parseInt(container.querySelector('#att-subj-sel').value);
-                const date    = container.querySelector('#att-date-inp').value;
-                const status  = container.querySelector('input[name="att-status"]:checked')?.value || 'present';
-                const note    = container.querySelector('#att-note-inp').value.trim();
-
-                if (!date) return;
-
-                try {
-                    await API.execute(
-                        'INSERT INTO attendance_records (subject_id, date, status, note) VALUES (?, ?, ?, ?)',
-                        [subjId, date, status, note || null]
-                    );
-                    Modal.close();
-                    await this.loadData();
-                } catch (err) {
-                    alert('Failed to save: ' + err.message);
-                }
-            });
-        };
-
-        if (isTransition) {
-            Modal.transitionTo('Mark Attendance', html, bindHandler);
-        } else {
-            Modal.open('Mark Attendance', html, bindHandler);
-        }
-    },
-
     // ── Subject History Modal ──────────────────────────────────────────────
     showSubjectHistory(subj) {
-        const recs   = this.records.filter(r => r.subject_id === subj.id);
+        const recs = this.records.filter(r => r.subject_id === subj.id);
         const { total, attended, absent, pct } = this.getStats(subj.id);
 
         const statusIcon  = { present: '✅', late: '🕐', absent: '❌' };
         const statusColor = { present: '#10b981', late: '#f59f00', absent: '#ef4444' };
         const statusLabel = { present: 'Present', late: 'Late', absent: 'Absent' };
+
+        // Pending unmarked sessions for this specific subject
+        const pendingForSubj = this.unmarkedSessions.filter(s => s.subjectId === subj.id);
+        let pendingHTML = '';
+        if (pendingForSubj.length > 0) {
+            pendingHTML = `
+                <div style="background:rgba(139,92,246,0.08); border:1px dashed var(--primary); border-radius:var(--radius-sm); padding:10px; display:flex; flex-direction:column; gap:8px;">
+                    <div style="font-size:11.5px; font-weight:800; color:var(--primary); text-transform:uppercase; letter-spacing:0.5px;">⚡ Pending Unmarked Sessions (${pendingForSubj.length})</div>
+                    ${pendingForSubj.map(s => `
+                        <div style="display:flex; align-items:center; justify-content:space-between; gap:6px; background:var(--surface-color); padding:8px 10px; border-radius:var(--radius-xs); border:1px solid var(--border-color);">
+                            <div style="min-width:0;">
+                                <div style="font-size:12px; font-weight:700; color:var(--text-primary);">${s.dateLabel} • ${s.timeStr}</div>
+                                ${s.location ? `<div style="font-size:11px; color:var(--text-tertiary);">📍 ${s.location}</div>` : ''}
+                            </div>
+                            <div style="display:flex; gap:4px; flex-shrink:0;">
+                                <button onclick="AttendancePage.quickMark(${s.subjectId}, '${s.dateISO}', 'present', '${s.timeStr}', '${s.location}'); Modal.close();"
+                                    style="background:rgba(16,185,129,0.15); color:#10b981; border:none; border-radius:4px; padding:3px 7px; font-size:10.5px; font-weight:700; cursor:pointer;">✅</button>
+                                <button onclick="AttendancePage.showLateHoursModal(${s.subjectId}, '${s.subjectName.replace(/'/g, "\\'")}', '${s.subjectColor}', '${s.dateISO}', '${s.dateLabel}', '${s.timeStr}', '${s.location || ''}', ${s.durationHrs}, true);"
+                                    style="background:rgba(245,159,0,0.15); color:#f59f00; border:none; border-radius:4px; padding:3px 7px; font-size:10.5px; font-weight:700; cursor:pointer;">🕐</button>
+                                <button onclick="AttendancePage.quickMark(${s.subjectId}, '${s.dateISO}', 'absent', '${s.timeStr}', '${s.location}'); Modal.close();"
+                                    style="background:rgba(239,68,68,0.15); color:#ef4444; border:none; border-radius:4px; padding:3px 7px; font-size:10.5px; font-weight:700; cursor:pointer;">❌</button>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }
 
         const histHTML = recs.length === 0
             ? '<div style="text-align:center;padding:24px 0;color:var(--text-tertiary);font-size:13px;">No records yet for this subject.</div>'
@@ -401,23 +712,22 @@ const AttendancePage = {
                     <div style="height:100%;width:${ringPct}%;background:${ringColor};border-radius:3px;"></div>
                 </div>
 
+                ${pendingHTML}
+
                 <!-- History list -->
-                <div style="max-height:40vh;overflow-y:auto;">
+                <div style="max-height:35vh;overflow-y:auto;">
+                    <div style="font-size:11px; font-weight:700; color:var(--text-tertiary); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px;">Past Records</div>
                     ${histHTML}
                 </div>
 
                 <!-- Actions -->
                 <div style="display:flex;gap:10px;">
-                    <button class="btn btn-primary" onclick="AttendancePage.showMarkModal(${subj.id}, true);"
-                        style="flex:1;padding:11px 0;font-size:13px;background:linear-gradient(135deg,#8b5cf6,#7c3aed);">
-                        ➕ Mark
-                    </button>
                     <button class="btn btn-danger" onclick="AttendancePage.confirmDeleteSubject(${subj.id})"
-                        style="padding:11px 16px;font-size:13px;">
+                        style="flex:1;padding:11px 16px;font-size:13px;">
                         🗑 Delete Subject
                     </button>
+                    <button class="btn btn-secondary" onclick="Modal.close()" style="flex:1;padding:11px 0;font-size:13px;">Close</button>
                 </div>
-                <button class="btn btn-secondary" onclick="Modal.close()" style="padding:11px 0;font-size:13px;">Close</button>
             </div>
         `;
 
@@ -469,6 +779,17 @@ const AttendancePage = {
                     </form>
                 </div>
 
+                <!-- Start New Semester Reset Section -->
+                <div style="border-top:1px dashed var(--border-color); padding-top:12px; margin-top:2px;">
+                    <button type="button" id="btn-start-new-semester"
+                        style="width:100%; padding:11px 0; font-size:13px; font-weight:700; border-radius:var(--radius-sm); background:rgba(239,68,68,0.1); color:#ef4444; border:1px solid rgba(239,68,68,0.25); cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px;">
+                        <span>🎓</span> Start New Semester / Reset All
+                    </button>
+                    <div style="font-size:11px; color:var(--text-tertiary); text-align:center; margin-top:6px;">
+                        Clears all subjects, attendance records & past class timetables for a fresh semester.
+                    </div>
+                </div>
+
                 <button class="btn btn-secondary" onclick="Modal.close()" style="padding:11px 0;font-size:13px;flex-shrink:0;">Done</button>
             </div>
         `;
@@ -501,7 +822,38 @@ const AttendancePage = {
                     alert('Failed to add subject: ' + err.message);
                 }
             });
+
+            // Start New Semester Button listener
+            container.querySelector('#btn-start-new-semester')?.addEventListener('click', () => {
+                this.startNewSemester();
+            });
         });
+    },
+
+    // ── Start New Semester (Clear all subjects, records & class schedules) ────
+    async startNewSemester() {
+        const confirmMsg = "🎓 Start New Semester?\n\nThis will permanently delete:\n• All attendance subjects\n• All attendance records\n• All class timetable schedules from Planner\n\n(Exams, Meetings, and Assignments will remain untouched).\n\nAre you sure you want to start a fresh semester?";
+        if (!confirm(confirmMsg)) return;
+
+        try {
+            // 1. Delete all attendance records
+            await API.execute("DELETE FROM attendance_records");
+            // 2. Delete all attendance subjects
+            await API.execute("DELETE FROM attendance_subjects");
+            // 3. Delete all schedule entries of type 'class'
+            await API.execute("DELETE FROM schedule WHERE type = 'class'");
+            // 4. Delete pending notifications for classes (if table exists)
+            try { await API.execute("DELETE FROM notifications WHERE type = 'schedule' AND title LIKE 'Upcoming Class%'"); } catch (_) {}
+
+            // Slide modal down first, then show success after animation completes
+            Modal.close();
+            await this.loadData();
+            setTimeout(() => {
+                alert("🎉 New semester started! All old subjects and class schedules have been cleared.");
+            }, 320);
+        } catch (err) {
+            alert("Failed to reset semester: " + err.message);
+        }
     },
 
     // ── Delete record ──────────────────────────────────────────────────────
@@ -520,9 +872,14 @@ const AttendancePage = {
     async confirmDeleteSubject(subjectId, fromManageModal = false) {
         const subj = this.subjects.find(s => s.id === subjectId);
         if (!subj) return;
-        if (!confirm(`Delete subject "${subj.name}"? All attendance records for this subject will also be deleted.`)) return;
+        if (!confirm(`Delete subject "${subj.name}"?\n\nThis will delete all attendance records and calendar class schedules for this subject.`)) return;
         try {
+            await API.execute('DELETE FROM attendance_records WHERE subject_id = ?', [subjectId]);
             await API.execute('DELETE FROM attendance_subjects WHERE id = ?', [subjectId]);
+            // Also clean matching schedule class entries for this subject
+            await API.execute("DELETE FROM schedule WHERE type = 'class' AND (title = ? OR title LIKE ?)", [subj.name, `%${subj.name}%`]);
+            await API.execute("DELETE FROM notifications WHERE type = 'schedule' AND title LIKE ?", [`%${subj.name}%`]);
+
             await this.loadData();
             if (fromManageModal) {
                 this.showManageModal();
@@ -534,23 +891,27 @@ const AttendancePage = {
         }
     },
 
-    // ── Events ────────────────────────────────────────────────────────────
+    // ── Bind top events ────────────────────────────────────────────────────
     bindEvents() {
-        document.getElementById('att-mark-btn')?.addEventListener('click', () => this.showMarkModal());
-        document.getElementById('att-manage-btn')?.addEventListener('click', () => this.showManageModal());
+        document.getElementById('att-manage-btn')?.addEventListener('click', () => {
+            this.showManageModal();
+        });
 
         document.querySelectorAll('.att-filter-btn').forEach(btn => {
             btn.addEventListener('click', () => {
-                this.filter = btn.dataset.filter;
                 document.querySelectorAll('.att-filter-btn').forEach(b => {
-                    const isActive = b === btn;
-                    b.style.background   = isActive ? 'var(--primary)' : 'transparent';
-                    b.style.color        = isActive ? '#fff' : 'var(--text-secondary)';
-                    b.style.borderColor  = isActive ? 'var(--primary)' : 'var(--border-color)';
+                    b.classList.remove('active');
+                    b.style.background  = 'transparent';
+                    b.style.color       = 'var(--text-secondary)';
+                    b.style.borderColor = 'var(--border-color)';
                 });
+                btn.classList.add('active');
+                btn.style.background  = 'var(--primary)';
+                btn.style.color       = '#ffffff';
+                btn.style.borderColor = 'var(--primary)';
+                this.filter = btn.dataset.filter;
                 this.renderSubjects();
             });
         });
     }
 };
-

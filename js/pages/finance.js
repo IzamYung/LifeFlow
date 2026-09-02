@@ -73,12 +73,6 @@ const FinancePage = {
             if (page) page.classList.add('active');
         }, 50);
 
-        // Bind FAB shortcut
-        const fabBtn = document.getElementById('fab-action-transaction');
-        if (fabBtn) {
-            fabBtn.onclick = () => Forms.showAddTransaction(this.wallets, this.categories, () => this.refreshData());
-        }
-
         await this.loadFinanceData();
         this.bindEvents();
     },

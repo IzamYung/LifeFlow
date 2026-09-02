@@ -469,14 +469,18 @@ const App = {
     },
 
     // -------------------------------------------------------------------------
-    // 4. FLOATING ACTION BUTTON (FAB) LOGIC
+    // 4. FLOATING ACTION BUTTON (FAB) LOGIC (Universal on all pages)
     // -------------------------------------------------------------------------
     initFAB() {
         const fabContainer = document.getElementById('global-fab-container');
-        const mainFab = document.getElementById('main-fab');
+        const mainFab      = document.getElementById('main-fab');
+        const actionTx     = document.getElementById('fab-action-transaction');
+        const actionSched  = document.getElementById('fab-action-schedule');
+        const actionAssign = document.getElementById('fab-action-assignment');
 
-        if (!mainFab) return;
+        if (!mainFab || !fabContainer) return;
 
+        // Clone and replace main FAB to clean previous listeners
         const newFab = mainFab.cloneNode(true);
         mainFab.parentNode.replaceChild(newFab, mainFab);
 
@@ -488,6 +492,79 @@ const App = {
         document.addEventListener('click', () => {
             fabContainer.classList.remove('active');
         });
+
+        // ── Navigation & Refresh Helper ───────────────────────────────────
+        const navigateTo = async (targetRoute, tab = null) => {
+            fabContainer.classList.remove('active');
+            if (targetRoute === 'planner' && tab && typeof PlannerPage !== 'undefined') {
+                PlannerPage.activeTab = tab;
+            }
+
+            const current = window.location.hash.slice(2).split('?')[0] || 'dashboard';
+            if (current === targetRoute) {
+                // If already on the target page, re-render immediately
+                if (targetRoute === 'finance' && typeof FinancePage !== 'undefined' && FinancePage.loadFinanceData) {
+                    await FinancePage.loadFinanceData();
+                    FinancePage.renderFinanceUI();
+                } else if (targetRoute === 'planner' && typeof PlannerPage !== 'undefined' && PlannerPage.renderActiveTab) {
+                    await PlannerPage.renderActiveTab();
+                } else {
+                    await App.reloadPage();
+                }
+            } else {
+                // Navigate to the target page via hash route
+                window.location.hash = `#/${targetRoute}`;
+            }
+        };
+
+        // ── 1. Quick Add Transaction (Finance) ───────────────────────────
+        if (actionTx) {
+            actionTx.onclick = async (e) => {
+                e.stopPropagation();
+                fabContainer.classList.remove('active');
+
+                try {
+                    const wallets = await API.query("SELECT id, name, type, balance, color FROM wallets ORDER BY id ASC");
+                    const categories = await API.query("SELECT id, name, type, icon, color FROM transaction_categories ORDER BY type DESC, name ASC");
+
+                    if (wallets.length === 0) {
+                        alert("Please create a wallet first in Finance page.");
+                        window.location.hash = '#/finance';
+                        return;
+                    }
+
+                    Forms.showAddTransaction(wallets, categories, async () => {
+                        await navigateTo('finance');
+                    });
+                } catch (err) {
+                    alert("Error opening transaction form: " + err.message);
+                }
+            };
+        }
+
+        // ── 2. Quick Add Schedule Event (Planner Calendar) ───────────────
+        if (actionSched) {
+            actionSched.onclick = (e) => {
+                e.stopPropagation();
+                fabContainer.classList.remove('active');
+
+                Forms.showAddEvent(async () => {
+                    await navigateTo('planner', 'schedule');
+                });
+            };
+        }
+
+        // ── 3. Quick Add Assignment / Task (Planner Tasks) ───────────────
+        if (actionAssign) {
+            actionAssign.onclick = (e) => {
+                e.stopPropagation();
+                fabContainer.classList.remove('active');
+
+                Forms.showAddAssignment(async () => {
+                    await navigateTo('planner', 'assignment');
+                });
+            };
+        }
     },
 
     refreshActivePage() {

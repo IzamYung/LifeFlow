@@ -146,11 +146,6 @@ const Forms = {
         const html = `
             <form id="form-event" class="settings-form">
                 <div class="form-group">
-                    <label for="ev-title">Event Title</label>
-                    <input type="text" id="ev-title" name="title" placeholder="e.g. CS 301 Lecture, Midterm Exam" required>
-                </div>
-
-                <div class="form-group">
                     <label for="ev-type">Type</label>
                     <select id="ev-type" name="type" required>
                         <option value="class">Class / Lecture</option>
@@ -160,18 +155,42 @@ const Forms = {
                     </select>
                 </div>
 
+                <!-- Subject picker: only visible when type = class -->
+                <div class="form-group" id="ev-subject-group" style="overflow:visible; max-height:0; opacity:0; margin-bottom:0; transition:max-height 0.32s ease, opacity 0.25s ease, margin-bottom 0.3s ease;">
+                    <label style="margin-bottom:4px; display:block; font-size:13px; font-weight:700; color:var(--text-secondary);">Subject</label>
+                    <div style="position:relative;">
+                        <input type="text" id="ev-title" name="title" placeholder="Type or pick a subject..." autocomplete="off"
+                            style="width:100%; box-sizing:border-box; padding-right:38px;">
+                        <button type="button" id="ev-subj-toggle" tabindex="-1"
+                            style="position:absolute;right:0;top:0;bottom:0;width:38px;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text-secondary);">
+                            <svg id="ev-subj-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:16px;height:16px;transition:transform 0.25s ease;">
+                                <polyline points="6 9 12 15 18 9"/>
+                            </svg>
+                        </button>
+                        <div id="ev-subj-dropdown" style="position:absolute;left:0;right:0;top:calc(100% + 4px);z-index:999;background:var(--surface-variant);border:1px solid var(--border-color);border-radius:var(--radius-md);box-shadow:0 8px 24px rgba(0,0,0,0.18);overflow:hidden;max-height:0;opacity:0;transition:max-height 0.28s ease,opacity 0.2s ease;pointer-events:none;">
+                            <div id="ev-subj-list" style="overflow-y:auto;max-height:190px;padding:4px 0;"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Free-text title for non-class types -->
+                <div class="form-group" id="ev-title-group" style="display:none;">
+                    <label for="ev-title-free">Event Title</label>
+                    <input type="text" id="ev-title-free" placeholder="e.g. Midterm Exam, Study Group" autocomplete="off">
+                </div>
+
                 <div class="form-group">
                     <label for="ev-location">Location</label>
                     <input type="text" id="ev-location" name="location" placeholder="e.g. Hall of Science, Library Room 4">
                 </div>
 
                 <div class="form-group">
-                    <label for="ev-start">Start Date & Time</label>
+                    <label for="ev-start">Start Date &amp; Time</label>
                     <input type="datetime-local" id="ev-start" name="start_time" required>
                 </div>
 
                 <div class="form-group">
-                    <label for="ev-end">End Date & Time</label>
+                    <label for="ev-end">End Date &amp; Time</label>
                     <input type="datetime-local" id="ev-end" name="end_time" required>
                 </div>
 
@@ -189,22 +208,22 @@ const Forms = {
                         <option value="monthly">Monthly</option>
                     </select>
                     <div id="ev-recur-box" class="recurrence-expand-box">
-                        <div style="background: var(--surface-variant); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 12px;">
-                            <label for="ev-recur-count" id="ev-recur-count-label" style="font-size: 12px; font-weight: 700; color: var(--text-primary); margin-bottom: 4px; display: block;">Repeat For (How many days?):</label>
-                            <input type="number" id="ev-recur-count" name="recur_count" min="2" max="60" value="7" style="width: 100%; min-height: 38px; padding: 8px 12px; font-size: 13px; font-weight: 600;">
-                            <p id="ev-recur-hint" style="font-size: 11px; color: var(--text-secondary); margin-top: 6px; line-height: 1.3;">Will create 7 daily sessions automatically.</p>
+                        <div style="background:var(--surface-variant);border:1px solid var(--border-color);border-radius:var(--radius-sm);padding:12px;">
+                            <label for="ev-recur-count" id="ev-recur-count-label" style="font-size:12px;font-weight:700;color:var(--text-primary);margin-bottom:4px;display:block;">Repeat For (How many days?):</label>
+                            <input type="number" id="ev-recur-count" name="recur_count" min="2" max="60" value="7" style="width:100%;min-height:38px;padding:8px 12px;font-size:13px;font-weight:600;">
+                            <p id="ev-recur-hint" style="font-size:11px;color:var(--text-secondary);margin-top:6px;line-height:1.3;">Will create 7 daily sessions automatically.</p>
                         </div>
                     </div>
                 </div>
 
                 <div class="form-group">
                     <label>Label Color</label>
-                    <div style="display: flex; gap: 10px; margin-top: 6px;">
-                        <label><input type="radio" name="color" value="#6366f1" checked> <span style="background:#6366f1; width:16px; height:16px; display:inline-block; border-radius:50%; vertical-align:middle;"></span></label>
-                        <label><input type="radio" name="color" value="#3b82f6"> <span style="background:#3b82f6; width:16px; height:16px; display:inline-block; border-radius:50%; vertical-align:middle;"></span></label>
-                        <label><input type="radio" name="color" value="#10b981"> <span style="background:#10b981; width:16px; height:16px; display:inline-block; border-radius:50%; vertical-align:middle;"></span></label>
-                        <label><input type="radio" name="color" value="#f59e0b"> <span style="background:#f59e0b; width:16px; height:16px; display:inline-block; border-radius:50%; vertical-align:middle;"></span></label>
-                        <label><input type="radio" name="color" value="#ef4444"> <span style="background:#ef4444; width:16px; height:16px; display:inline-block; border-radius:50%; vertical-align:middle;"></span></label>
+                    <div style="display:flex;gap:10px;margin-top:6px;" id="ev-color-group">
+                        <label><input type="radio" name="color" value="#8b5cf6" checked> <span style="background:#8b5cf6;width:16px;height:16px;display:inline-block;border-radius:50%;vertical-align:middle;"></span></label>
+                        <label><input type="radio" name="color" value="#3b82f6"> <span style="background:#3b82f6;width:16px;height:16px;display:inline-block;border-radius:50%;vertical-align:middle;"></span></label>
+                        <label><input type="radio" name="color" value="#10b981"> <span style="background:#10b981;width:16px;height:16px;display:inline-block;border-radius:50%;vertical-align:middle;"></span></label>
+                        <label><input type="radio" name="color" value="#f59e0b"> <span style="background:#f59e0b;width:16px;height:16px;display:inline-block;border-radius:50%;vertical-align:middle;"></span></label>
+                        <label><input type="radio" name="color" value="#ef4444"> <span style="background:#ef4444;width:16px;height:16px;display:inline-block;border-radius:50%;vertical-align:middle;"></span></label>
                     </div>
                 </div>
 
@@ -215,24 +234,126 @@ const Forms = {
             </form>
         `;
 
-        Modal.open('Add Schedule Event', html, (container) => {
-            const form = container.querySelector('#form-event');
-            const startInput = container.querySelector('#ev-start');
-            const endInput = container.querySelector('#ev-end');
-            const recurSelect = container.querySelector('#ev-recur');
-            const recurBox = container.querySelector('#ev-recur-box');
+        Modal.open('Add Schedule Event', html, async (container) => {
+            const form            = container.querySelector('#form-event');
+            const typeSelect      = container.querySelector('#ev-type');
+            const subjectGroup    = container.querySelector('#ev-subject-group');
+            const titleGroup      = container.querySelector('#ev-title-group');
+            const titleInput      = container.querySelector('#ev-title');
+            const titleFree       = container.querySelector('#ev-title-free');
+            const toggleBtn       = container.querySelector('#ev-subj-toggle');
+            const chevron         = container.querySelector('#ev-subj-chevron');
+            const dropdown        = container.querySelector('#ev-subj-dropdown');
+            const subjList        = container.querySelector('#ev-subj-list');
+            const startInput      = container.querySelector('#ev-start');
+            const endInput        = container.querySelector('#ev-end');
+            const recurSelect     = container.querySelector('#ev-recur');
+            const recurBox        = container.querySelector('#ev-recur-box');
             const recurCountInput = container.querySelector('#ev-recur-count');
             const recurCountLabel = container.querySelector('#ev-recur-count-label');
-            const recurHint = container.querySelector('#ev-recur-hint');
+            const recurHint       = container.querySelector('#ev-recur-hint');
 
+            let attSubjs = [];
+            let dropdownOpen = false;
+
+            try {
+                attSubjs = await API.query('SELECT name, color FROM attendance_subjects ORDER BY name ASC');
+            } catch (e) {
+                console.warn('Could not load attendance subjects:', e);
+            }
+
+            const buildSubjList = (filter) => {
+                const lower = (filter || '').toLowerCase();
+                const items = lower ? attSubjs.filter(s => s.name.toLowerCase().includes(lower)) : attSubjs;
+                if (items.length === 0) {
+                    subjList.innerHTML = '<div style="padding:12px 14px;font-size:13px;color:var(--text-tertiary);">No matching subjects</div>';
+                    return;
+                }
+                subjList.innerHTML = items.map(s =>
+                    '<div class="ev-subj-item" data-name="' + s.name + '" data-color="' + s.color + '" ' +
+                    'style="display:flex;align-items:center;gap:10px;padding:10px 14px;cursor:pointer;font-size:13px;font-weight:600;color:var(--text-primary);transition:background 0.15s ease;">' +
+                    '<span style="width:10px;height:10px;border-radius:50%;background:' + s.color + ';flex-shrink:0;display:inline-block;"></span>' +
+                    s.name + '</div>'
+                ).join('');
+
+                subjList.querySelectorAll('.ev-subj-item').forEach(item => {
+                    item.addEventListener('mouseenter', () => { item.style.background = 'rgba(139,92,246,0.1)'; });
+                    item.addEventListener('mouseleave', () => { item.style.background = 'transparent'; });
+                    item.addEventListener('mousedown', (ev) => {
+                        ev.preventDefault();
+                        titleInput.value = item.dataset.name;
+                        const radio = form.querySelector('input[name="color"][value="' + item.dataset.color + '"]');
+                        if (radio) radio.checked = true;
+                        closeDropdown();
+                    });
+                });
+            };
+
+            // ── Dropdown open / close ──────────────────────────────────────
+            const openDropdown = () => {
+                if (!attSubjs.length) return;
+                dropdownOpen = true;
+                buildSubjList(titleInput ? titleInput.value : '');
+                dropdown.style.maxHeight = '220px';
+                dropdown.style.opacity = '1';
+                dropdown.style.pointerEvents = 'all';
+                if (chevron) chevron.style.transform = 'rotate(180deg)';
+            };
+
+            const closeDropdown = () => {
+                dropdownOpen = false;
+                dropdown.style.maxHeight = '0';
+                dropdown.style.opacity = '0';
+                dropdown.style.pointerEvents = 'none';
+                if (chevron) chevron.style.transform = 'rotate(0deg)';
+            };
+
+            if (toggleBtn) toggleBtn.addEventListener('click', () => { dropdownOpen ? closeDropdown() : openDropdown(); });
+            if (titleInput) {
+                titleInput.addEventListener('focus', openDropdown);
+                titleInput.addEventListener('input', () => {
+                    buildSubjList(titleInput.value);
+                    if (!dropdownOpen) openDropdown();
+                    const match = attSubjs.find(s => s.name.toLowerCase() === titleInput.value.trim().toLowerCase());
+                    if (match) {
+                        const radio = form.querySelector('input[name="color"][value="' + match.color + '"]');
+                        if (radio) radio.checked = true;
+                    }
+                });
+                titleInput.addEventListener('blur', () => setTimeout(closeDropdown, 150));
+            }
+
+            // ── Show/hide subject picker based on event type ───────────────
+            const updateTypeUI = () => {
+                const isClass = typeSelect.value === 'class';
+                if (isClass) {
+                    subjectGroup.style.maxHeight = '130px';
+                    subjectGroup.style.opacity = '1';
+                    subjectGroup.style.marginBottom = '';
+                    titleGroup.style.display = 'none';
+                    if (titleFree) titleFree.removeAttribute('required');
+                    if (titleInput) titleInput.setAttribute('required', '');
+                } else {
+                    subjectGroup.style.maxHeight = '0';
+                    subjectGroup.style.opacity = '0';
+                    subjectGroup.style.marginBottom = '0';
+                    titleGroup.style.display = '';
+                    if (titleInput) titleInput.removeAttribute('required');
+                    if (titleFree) titleFree.setAttribute('required', '');
+                    closeDropdown();
+                }
+            };
+            typeSelect.addEventListener('change', updateTypeUI);
+            updateTypeUI();
+
+            // ── Default start/end times ───────────────────────────────────
             const now = new Date();
             now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
             startInput.value = now.toISOString().slice(0, 16);
-            
-            const end = new Date(now.getTime() + 60 * 60 * 1000);
-            endInput.value = end.toISOString().slice(0, 16);
+            const endDT = new Date(now.getTime() + 3600000);
+            endInput.value = endDT.toISOString().slice(0, 16);
 
-            // Recurrence smooth slide and dynamic helper text
+            // ── Recurrence UI ─────────────────────────────────────────────
             const updateRecurUI = () => {
                 const val = recurSelect.value;
                 if (val === 'none') {
@@ -242,54 +363,52 @@ const Forms = {
                     if (val === 'daily') {
                         recurCountLabel.textContent = 'Repeat For (How many days?):';
                         if (!recurCountInput.value) recurCountInput.value = '7';
-                        recurHint.textContent = `Will create ${recurCountInput.value} consecutive daily sessions.`;
+                        recurHint.textContent = 'Will create ' + recurCountInput.value + ' consecutive daily sessions.';
                     } else if (val === 'weekly') {
                         recurCountLabel.textContent = 'Repeat For (How many weeks / semester?):';
                         if (!recurCountInput.value) recurCountInput.value = '14';
-                        recurHint.textContent = `Will repeat every week for ${recurCountInput.value} weeks.`;
+                        recurHint.textContent = 'Will repeat every week for ' + recurCountInput.value + ' weeks.';
                     } else if (val === 'monthly') {
                         recurCountLabel.textContent = 'Repeat For (How many months?):';
                         if (!recurCountInput.value) recurCountInput.value = '6';
-                        recurHint.textContent = `Will repeat every month for ${recurCountInput.value} months.`;
+                        recurHint.textContent = 'Will repeat every month for ' + recurCountInput.value + ' months.';
                     }
                 }
             };
-
             recurSelect.addEventListener('change', updateRecurUI);
             recurCountInput.addEventListener('input', () => {
                 const count = parseInt(recurCountInput.value, 10) || 1;
                 const val = recurSelect.value;
-                if (val === 'daily') {
-                    recurHint.textContent = `Will create ${count} consecutive daily sessions.`;
-                } else if (val === 'weekly') {
-                    recurHint.textContent = `Will repeat every week for ${count} weeks.`;
-                } else if (val === 'monthly') {
-                    recurHint.textContent = `Will repeat every month for ${count} months.`;
-                }
+                if (val === 'daily') recurHint.textContent = 'Will create ' + count + ' consecutive daily sessions.';
+                else if (val === 'weekly') recurHint.textContent = 'Will repeat every week for ' + count + ' weeks.';
+                else if (val === 'monthly') recurHint.textContent = 'Will repeat every month for ' + count + ' months.';
             });
 
+            // ── Form submit ───────────────────────────────────────────────
             form.addEventListener('submit', async (e) => {
                 e.preventDefault();
-                const title = document.getElementById('ev-title').value.trim();
-                const type = document.getElementById('ev-type').value;
-                const location = document.getElementById('ev-location').value.trim();
-                const description = document.getElementById('ev-desc').value.trim();
-                const recurrence = recurSelect.value;
-                const color = form.elements['color'].value;
+                const isClass = typeSelect.value === 'class';
+                const title = isClass
+                    ? (titleInput ? titleInput.value.trim() : '')
+                    : (titleFree ? titleFree.value.trim() : '');
+                if (!title) { alert('Please enter a title.'); return; }
 
+                const type        = typeSelect.value;
+                const location    = container.querySelector('#ev-location').value.trim();
+                const description = container.querySelector('#ev-desc').value.trim();
+                const recurrence  = recurSelect.value;
+                const color       = form.elements['color'].value;
                 const repeatCount = (recurrence !== 'none') ? Math.max(1, Math.min(60, parseInt(recurCountInput.value, 10) || 1)) : 1;
 
                 const originalStartDate = new Date(startInput.value);
-                const originalEndDate = new Date(endInput.value);
+                const originalEndDate   = new Date(endInput.value);
 
                 try {
                     const queueEventNotification = async (notifTitle, notifBody, triggerTimeMS) => {
-                        const nowMS = Date.now();
-                        if (triggerTimeMS > nowMS) {
+                        if (triggerTimeMS > Date.now()) {
                             const trigDate = new Date(triggerTimeMS);
                             trigDate.setMinutes(trigDate.getMinutes() - trigDate.getTimezoneOffset());
                             const notifTimeStr = trigDate.toISOString().replace('T', ' ').slice(0, 19);
-                            // Dedup check: skip if same title + same scheduled_time already exists
                             const exist = await API.query(
                                 "SELECT id FROM notifications WHERE title = ? AND scheduled_time = ? AND type = 'schedule'",
                                 [notifTitle, notifTimeStr]
@@ -303,72 +422,41 @@ const Forms = {
 
                     for (let i = 0; i < repeatCount; i++) {
                         const instStart = new Date(originalStartDate.getTime());
-                        const instEnd = new Date(originalEndDate.getTime());
-
+                        const instEnd   = new Date(originalEndDate.getTime());
                         if (recurrence === 'daily') {
                             instStart.setDate(originalStartDate.getDate() + i);
                             instEnd.setDate(originalEndDate.getDate() + i);
                         } else if (recurrence === 'weekly') {
-                            instStart.setDate(originalStartDate.getDate() + (i * 7));
-                            instEnd.setDate(originalEndDate.getDate() + (i * 7));
+                            instStart.setDate(originalStartDate.getDate() + i * 7);
+                            instEnd.setDate(originalEndDate.getDate() + i * 7);
                         } else if (recurrence === 'monthly') {
-                            const targetMonth = originalStartDate.getMonth() + i;
-                            const maxDays = new Date(originalStartDate.getFullYear(), targetMonth + 1, 0).getDate();
-                            const safeDay = Math.min(originalStartDate.getDate(), maxDays);
-                            instStart.setFullYear(originalStartDate.getFullYear(), targetMonth, safeDay);
-                            instEnd.setFullYear(originalEndDate.getFullYear(), targetMonth, safeDay);
+                            instStart.setMonth(originalStartDate.getMonth() + i);
+                            instEnd.setMonth(originalEndDate.getMonth() + i);
                         }
 
-                        // Local time string formatting
-                        const instStartFormatted = new Date(instStart.getTime() - instStart.getTimezoneOffset() * 60000).toISOString().replace('T', ' ').slice(0, 19);
-                        const instEndFormatted = new Date(instEnd.getTime() - instEnd.getTimezoneOffset() * 60000).toISOString().replace('T', ' ').slice(0, 19);
+                        const fmtStart = new Date(instStart.getTime() - instStart.getTimezoneOffset() * 60000).toISOString().replace('T', ' ').slice(0, 19);
+                        const fmtEnd   = new Date(instEnd.getTime()   - instEnd.getTimezoneOffset()   * 60000).toISOString().replace('T', ' ').slice(0, 19);
 
-                        await API.execute("INSERT INTO schedule (title, type, location, start_time, end_time, description, recurrence, color) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-                            [title, type, location ? location : null, instStartFormatted, instEndFormatted, description ? description : null, recurrence, color]);
+                        await API.execute(
+                            'INSERT INTO schedule (title, type, location, start_time, end_time, description, recurrence, color) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+                            [title, type, location || null, fmtStart, fmtEnd, description || null, recurrence, color]
+                        );
 
-                        // Queue alerts for each occurrence
-                        const startMS = instStart.getTime();
+                        const startMS      = instStart.getTime();
                         const eventTimeStr = instStart.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                        const locationStr = location ? ` in ${location}` : '';
+                        const locStr       = location ? ' in ' + location : '';
 
                         if (type === 'class') {
-                            // Class/Lecture: 2 hours before start
-                            await queueEventNotification(
-                                `Upcoming Class: ${title}`,
-                                `Starts in 2 hours at ${eventTimeStr}${locationStr}`,
-                                startMS - (2 * 60 * 60 * 1000)
-                            );
+                            await queueEventNotification('Upcoming Class: ' + title, 'Starts in 2 hours at ' + eventTimeStr + locStr, startMS - 7200000);
                         } else if (type === 'exam' || type === 'meeting') {
-                            const typeLabel = type === 'exam' ? 'Exam' : 'Meeting';
-                            // Exam/Meeting: 24 hours AND 2 hours before start
-                            await queueEventNotification(
-                                `Upcoming ${typeLabel} Tomorrow: ${title}`,
-                                `Starts in 24 hours at ${eventTimeStr}${locationStr}`,
-                                startMS - (24 * 60 * 60 * 1000)
-                            );
-                            await queueEventNotification(
-                                `Upcoming ${typeLabel}: ${title}`,
-                                `Starts in 2 hours at ${eventTimeStr}${locationStr}`,
-                                startMS - (2 * 60 * 60 * 1000)
-                            );
+                            const lbl = type === 'exam' ? 'Exam' : 'Meeting';
+                            await queueEventNotification('Upcoming ' + lbl + ' Tomorrow: ' + title, 'Starts in 24 hours at ' + eventTimeStr + locStr, startMS - 86400000);
+                            await queueEventNotification('Upcoming ' + lbl + ': ' + title, 'Starts in 2 hours at ' + eventTimeStr + locStr, startMS - 7200000);
                         } else if (type === 'event') {
-                            // Social Event: 3 days, 24 hours, AND 2 hours before start
                             const dateLabel = new Date(startMS).toLocaleDateString([], { month: 'short', day: 'numeric' });
-                            await queueEventNotification(
-                                `Upcoming Event in 3 Days: ${title}`,
-                                `Starts in 3 days on ${dateLabel} at ${eventTimeStr}${locationStr}`,
-                                startMS - (3 * 24 * 60 * 60 * 1000)
-                            );
-                            await queueEventNotification(
-                                `Upcoming Event Tomorrow: ${title}`,
-                                `Starts in 24 hours at ${eventTimeStr}${locationStr}`,
-                                startMS - (24 * 60 * 60 * 1000)
-                            );
-                            await queueEventNotification(
-                                `Upcoming Event: ${title}`,
-                                `Starts in 2 hours at ${eventTimeStr}${locationStr}`,
-                                startMS - (2 * 60 * 60 * 1000)
-                            );
+                            await queueEventNotification('Upcoming Event in 3 Days: ' + title, 'Starts in 3 days on ' + dateLabel + ' at ' + eventTimeStr + locStr, startMS - 259200000);
+                            await queueEventNotification('Upcoming Event Tomorrow: ' + title, 'Starts in 24 hours at ' + eventTimeStr + locStr, startMS - 86400000);
+                            await queueEventNotification('Upcoming Event: ' + title, 'Starts in 2 hours at ' + eventTimeStr + locStr, startMS - 7200000);
                         }
                     }
 
@@ -859,18 +947,15 @@ const Forms = {
     },
 
     // Helper: Event edit form HTML
+    // Helper: Event edit form HTML
     getEditEventHTML(event) {
         const startVal = event.start_time ? event.start_time.replace(' ', 'T').slice(0, 16) : '';
         const endVal = event.end_time ? event.end_time.replace(' ', 'T').slice(0, 16) : '';
-        const color = event.color || '#6366f1';
+        const isClass = event.type === 'class';
+        const color = event.color || '#8b5cf6';
 
         return `
             <form id="form-edit-event" class="settings-form">
-                <div class="form-group">
-                    <label for="eev-title">Event Title</label>
-                    <input type="text" id="eev-title" name="title" value="${event.title || ''}" placeholder="e.g. CS 301 Lecture, Midterm Exam" required>
-                </div>
-
                 <div class="form-group">
                     <label for="eev-type">Type</label>
                     <select id="eev-type" name="type" required>
@@ -881,18 +966,42 @@ const Forms = {
                     </select>
                 </div>
 
+                <!-- Subject picker: only visible when type = class -->
+                <div class="form-group" id="eev-subject-group" style="overflow:visible; max-height:${isClass ? '130px' : '0'}; opacity:${isClass ? '1' : '0'}; margin-bottom:${isClass ? '' : '0'}; transition:max-height 0.32s ease, opacity 0.25s ease, margin-bottom 0.3s ease;">
+                    <label style="margin-bottom:4px; display:block; font-size:13px; font-weight:700; color:var(--text-secondary);">Subject</label>
+                    <div style="position:relative;">
+                        <input type="text" id="eev-title" name="title" value="${isClass ? (event.title || '') : ''}" placeholder="Type or pick a subject..." autocomplete="off"
+                            style="width:100%; box-sizing:border-box; padding-right:38px;">
+                        <button type="button" id="eev-subj-toggle" tabindex="-1"
+                            style="position:absolute;right:0;top:0;bottom:0;width:38px;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text-secondary);">
+                            <svg id="eev-subj-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:16px;height:16px;transition:transform 0.25s ease;">
+                                <polyline points="6 9 12 15 18 9"/>
+                            </svg>
+                        </button>
+                        <div id="eev-subj-dropdown" style="position:absolute;left:0;right:0;top:calc(100% + 4px);z-index:999;background:var(--surface-variant);border:1px solid var(--border-color);border-radius:var(--radius-md);box-shadow:0 8px 24px rgba(0,0,0,0.18);overflow:hidden;max-height:0;opacity:0;transition:max-height 0.28s ease,opacity 0.2s ease;pointer-events:none;">
+                            <div id="eev-subj-list" style="overflow-y:auto;max-height:190px;padding:4px 0;"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Free-text title for non-class types -->
+                <div class="form-group" id="eev-title-group" style="display:${isClass ? 'none' : ''};">
+                    <label for="eev-title-free">Event Title</label>
+                    <input type="text" id="eev-title-free" value="${!isClass ? (event.title || '') : ''}" placeholder="e.g. Midterm Exam, Study Group" autocomplete="off">
+                </div>
+
                 <div class="form-group">
                     <label for="eev-location">Location</label>
                     <input type="text" id="eev-location" name="location" value="${event.location || ''}" placeholder="e.g. Hall of Science, Library Room 4">
                 </div>
 
                 <div class="form-group">
-                    <label for="eev-start">Start Date & Time</label>
+                    <label for="eev-start">Start Date &amp; Time</label>
                     <input type="datetime-local" id="eev-start" name="start_time" value="${startVal}" required>
                 </div>
 
                 <div class="form-group">
-                    <label for="eev-end">End Date & Time</label>
+                    <label for="eev-end">End Date &amp; Time</label>
                     <input type="datetime-local" id="eev-end" name="end_time" value="${endVal}" required>
                 </div>
 
@@ -903,8 +1012,8 @@ const Forms = {
 
                 <div class="form-group">
                     <label>Label Color</label>
-                    <div style="display: flex; gap: 10px; margin-top: 6px;">
-                        <label><input type="radio" name="color" value="#6366f1" ${color === '#6366f1' ? 'checked' : ''}> <span style="background:#6366f1; width:16px; height:16px; display:inline-block; border-radius:50%; vertical-align:middle;"></span></label>
+                    <div style="display: flex; gap: 10px; margin-top: 6px;" id="eev-color-group">
+                        <label><input type="radio" name="color" value="#8b5cf6" ${color === '#8b5cf6' ? 'checked' : ''}> <span style="background:#8b5cf6; width:16px; height:16px; display:inline-block; border-radius:50%; vertical-align:middle;"></span></label>
                         <label><input type="radio" name="color" value="#3b82f6" ${color === '#3b82f6' ? 'checked' : ''}> <span style="background:#3b82f6; width:16px; height:16px; display:inline-block; border-radius:50%; vertical-align:middle;"></span></label>
                         <label><input type="radio" name="color" value="#10b981" ${color === '#10b981' ? 'checked' : ''}> <span style="background:#10b981; width:16px; height:16px; display:inline-block; border-radius:50%; vertical-align:middle;"></span></label>
                         <label><input type="radio" name="color" value="#f59e0b" ${color === '#f59e0b' ? 'checked' : ''}> <span style="background:#f59e0b; width:16px; height:16px; display:inline-block; border-radius:50%; vertical-align:middle;"></span></label>
@@ -922,18 +1031,130 @@ const Forms = {
 
     // Helper: Event edit form submission and logic binding
     bindEditEventForm(container, event, onSaveSuccess) {
-        const form = container.querySelector('#form-edit-event');
-        const startInput = container.querySelector('#eev-start');
-        const endInput = container.querySelector('#eev-end');
+        const form            = container.querySelector('#form-edit-event');
+        const typeSelect      = container.querySelector('#eev-type');
+        const subjectGroup    = container.querySelector('#eev-subject-group');
+        const titleGroup      = container.querySelector('#eev-title-group');
+        const titleInput      = container.querySelector('#eev-title');
+        const titleFree       = container.querySelector('#eev-title-free');
+        const toggleBtn       = container.querySelector('#eev-subj-toggle');
+        const chevron         = container.querySelector('#eev-subj-chevron');
+        const dropdown        = container.querySelector('#eev-subj-dropdown');
+        const subjList        = container.querySelector('#eev-subj-list');
+        const startInput      = container.querySelector('#eev-start');
+        const endInput        = container.querySelector('#eev-end');
+
+        let attSubjs = [];
+        let dropdownOpen = false;
+
+        // Load subjects from Attendance
+        (async () => {
+            try {
+                attSubjs = await API.query('SELECT name, color FROM attendance_subjects ORDER BY name ASC');
+            } catch (e) {
+                console.warn('Could not load attendance subjects:', e);
+            }
+        })();
+
+        // Build custom dropdown list
+        const buildSubjList = (filter) => {
+            const lower = (filter || '').toLowerCase();
+            const items = lower ? attSubjs.filter(s => s.name.toLowerCase().includes(lower)) : attSubjs;
+
+            if (items.length === 0) {
+                subjList.innerHTML = '<div style="padding:12px 14px;font-size:13px;color:var(--text-tertiary);">No matching subjects</div>';
+                return;
+            }
+
+            subjList.innerHTML = items.map(s =>
+                '<div class="eev-subj-item" data-name="' + s.name + '" data-color="' + s.color + '" ' +
+                'style="display:flex;align-items:center;gap:10px;padding:10px 14px;cursor:pointer;font-size:13px;font-weight:600;color:var(--text-primary);transition:background 0.15s ease;">' +
+                '<span style="width:10px;height:10px;border-radius:50%;background:' + s.color + ';flex-shrink:0;display:inline-block;"></span>' +
+                s.name + '</div>'
+            ).join('');
+
+            subjList.querySelectorAll('.eev-subj-item').forEach(item => {
+                item.addEventListener('mouseenter', () => { item.style.background = 'rgba(139,92,246,0.1)'; });
+                item.addEventListener('mouseleave', () => { item.style.background = 'transparent'; });
+                item.addEventListener('mousedown', (ev) => {
+                    ev.preventDefault();
+                    titleInput.value = item.dataset.name;
+                    const radio = form.querySelector('input[name="color"][value="' + item.dataset.color + '"]');
+                    if (radio) radio.checked = true;
+                    closeDropdown();
+                });
+            });
+        };
+
+        const openDropdown = () => {
+            if (!attSubjs.length) return;
+            dropdownOpen = true;
+            buildSubjList(titleInput ? titleInput.value : '');
+            dropdown.style.maxHeight = '220px';
+            dropdown.style.opacity = '1';
+            dropdown.style.pointerEvents = 'all';
+            if (chevron) chevron.style.transform = 'rotate(180deg)';
+        };
+
+        const closeDropdown = () => {
+            dropdownOpen = false;
+            dropdown.style.maxHeight = '0';
+            dropdown.style.opacity = '0';
+            dropdown.style.pointerEvents = 'none';
+            if (chevron) chevron.style.transform = 'rotate(0deg)';
+        };
+
+        if (toggleBtn) toggleBtn.addEventListener('click', () => { dropdownOpen ? closeDropdown() : openDropdown(); });
+        if (titleInput) {
+            titleInput.addEventListener('focus', openDropdown);
+            titleInput.addEventListener('input', () => {
+                buildSubjList(titleInput.value);
+                if (!dropdownOpen) openDropdown();
+                const match = attSubjs.find(s => s.name.toLowerCase() === titleInput.value.trim().toLowerCase());
+                if (match) {
+                    const radio = form.querySelector('input[name="color"][value="' + match.color + '"]');
+                    if (radio) radio.checked = true;
+                }
+            });
+            titleInput.addEventListener('blur', () => setTimeout(closeDropdown, 150));
+        }
+
+        // Show/hide subject picker based on type
+        const updateTypeUI = () => {
+            const isClass = typeSelect.value === 'class';
+            if (isClass) {
+                subjectGroup.style.maxHeight = '130px';
+                subjectGroup.style.opacity = '1';
+                subjectGroup.style.marginBottom = '';
+                titleGroup.style.display = 'none';
+                if (titleFree) titleFree.removeAttribute('required');
+                if (titleInput) titleInput.setAttribute('required', '');
+            } else {
+                subjectGroup.style.maxHeight = '0';
+                subjectGroup.style.opacity = '0';
+                subjectGroup.style.marginBottom = '0';
+                titleGroup.style.display = '';
+                if (titleInput) titleInput.removeAttribute('required');
+                if (titleFree) titleFree.setAttribute('required', '');
+                closeDropdown();
+            }
+        };
+
+        typeSelect.addEventListener('change', updateTypeUI);
 
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
-            const title = document.getElementById('eev-title').value.trim();
-            const type = document.getElementById('eev-type').value;
-            const location = document.getElementById('eev-location').value.trim();
+            const isClass = typeSelect.value === 'class';
+            const title = isClass
+                ? (titleInput ? titleInput.value.trim() : '')
+                : (titleFree ? titleFree.value.trim() : '');
+            if (!title) { alert('Please enter a title.'); return; }
+
+            const type = typeSelect.value;
+            const location = container.querySelector('#eev-location').value.trim();
             const start_time = startInput.value.replace('T', ' ') + ':00';
             const end_time = endInput.value.replace('T', ' ') + ':00';
-            const description = document.getElementById('eev-desc').value.trim();
+            const description = container.querySelector('#eev-desc').value.trim();
             const recurrence = event.recurrence || 'none';
             const selectedColor = form.elements['color'].value;
 
