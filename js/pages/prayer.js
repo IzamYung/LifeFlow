@@ -363,7 +363,7 @@ const PrayerPage = {
                             "INSERT INTO notifications (title, body, type, scheduled_time, sent) VALUES (?, ?, 'prayer', ?, 0)",
                             [
                                 `Prayer Time: ${p.label}`,
-                                `It is now time for ${p.label} in ${this.selectedZone}.`,
+                                `It is now time for ${p.label} (${new Date(triggerTimeMS).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}) in ${this.selectedZone}.`,
                                 notifTimeStr
                             ]
                         );
