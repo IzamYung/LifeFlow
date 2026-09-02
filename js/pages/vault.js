@@ -9,57 +9,60 @@ const VaultPage = {
 
     async render(container) {
         container.innerHTML = `
-            <div class="page-container" id="vault-page">
-                <!-- Header -->
-                <div class="dashboard-header" style="display:flex; justify-content:space-between; align-items:center; padding-bottom: 12px;">
-                    <div class="welcome-section">
-                        <h2>My Vault</h2>
-                        <p>Store files, photos, and class documents in Telegram.</p>
+            <div class="page-container" id="vault-page" style="display:flex; flex-direction:column; height:100%; overflow:hidden; padding-bottom:0;">
+                <!-- Sticky Header Section -->
+                <div id="vault-sticky-header" style="flex-shrink:0; padding: 0 0 8px 0;">
+                    <!-- Header -->
+                    <div class="dashboard-header" style="display:flex; justify-content:space-between; align-items:center; padding-bottom: 12px;">
+                        <div class="welcome-section">
+                            <h2>My Vault</h2>
+                            <p>Store files, photos, and class documents in Telegram.</p>
+                        </div>
+                    </div>
+
+                    <!-- Action Controls Bar -->
+                    <div class="finance-controls" style="margin-bottom: 16px;">
+                        <div class="search-bar">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                            <input type="text" id="vault-search-input" placeholder="Search files, folders..." value="${this.searchQuery}">
+                        </div>
+
+                        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                            <button class="btn btn-secondary" id="vault-reload-btn" style="display: flex; align-items: center; gap: 6px; padding: 10px 14px;">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px;"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+                                Sync Cloud
+                            </button>
+                            
+                            <button class="btn btn-primary" id="vault-new-folder-btn" style="display: flex; align-items: center; gap: 6px; padding: 10px 14px; background: linear-gradient(135deg, #f59f00, #f08c00);">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px;"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                                + Folder
+                            </button>
+
+                            <button class="btn btn-primary" id="vault-add-note-btn" style="display: flex; align-items: center; gap: 6px; padding: 10px 14px; background: linear-gradient(135deg, #8b5cf6, #7c3aed);">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px;"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                                + Note
+                            </button>
+                            
+                            <button class="btn btn-primary" id="vault-upload-file-btn" style="display: flex; align-items: center; gap: 6px; padding: 10px 14px;">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                                + File
+                            </button>
+
+                            <button class="btn btn-primary" id="vault-camera-btn" style="display: flex; align-items: center; gap: 6px; padding: 10px 14px; background: linear-gradient(135deg, #10b981, #059669);">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px;"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                                Photo
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Breadcrumbs Directory Path Bar -->
+                    <div class="card" id="vault-breadcrumbs" style="padding: 10px 16px; margin-bottom: 12px; font-size: 13px; font-weight: 700; color: var(--text-secondary); display: flex; flex-direction: row; align-items: center; flex-wrap: wrap; gap: 4px; line-height: 1;">
+                        <!-- Rendered dynamically -->
                     </div>
                 </div>
 
-                <!-- Action Controls Bar -->
-                <div class="finance-controls" style="margin-bottom: 16px;">
-                    <div class="search-bar">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-                        <input type="text" id="vault-search-input" placeholder="Search files, folders..." value="${this.searchQuery}">
-                    </div>
-
-                    <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-                        <button class="btn btn-secondary" id="vault-reload-btn" style="display: flex; align-items: center; gap: 6px; padding: 10px 14px;">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px;"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
-                            Sync Cloud
-                        </button>
-                        
-                        <button class="btn btn-primary" id="vault-new-folder-btn" style="display: flex; align-items: center; gap: 6px; padding: 10px 14px; background: linear-gradient(135deg, #f59f00, #f08c00);">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px;"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
-                            + Folder
-                        </button>
-
-                        <button class="btn btn-primary" id="vault-add-note-btn" style="display: flex; align-items: center; gap: 6px; padding: 10px 14px; background: linear-gradient(135deg, #8b5cf6, #7c3aed);">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px;"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-                            + Note
-                        </button>
-                        
-                        <button class="btn btn-primary" id="vault-upload-file-btn" style="display: flex; align-items: center; gap: 6px; padding: 10px 14px;">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-                            + File
-                        </button>
-
-                        <button class="btn btn-primary" id="vault-camera-btn" style="display: flex; align-items: center; gap: 6px; padding: 10px 14px; background: linear-gradient(135deg, #10b981, #059669);">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px;"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
-                            Photo
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Breadcrumbs Directory Path Bar -->
-                <div class="card" id="vault-breadcrumbs" style="padding: 10px 16px; margin-bottom: 16px; font-size: 13px; font-weight: 700; color: var(--text-secondary); display: flex; flex-direction: row; align-items: center; flex-wrap: wrap; gap: 4px; line-height: 1;">
-                    <!-- Rendered dynamically -->
-                </div>
-
-                <!-- Explorer Content Viewport -->
-                <div class="assignments-grid" id="vault-explorer-grid" style="min-height: 250px; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 14px;">
+                <!-- Scrollable Explorer Content Viewport -->
+                <div class="assignments-grid" id="vault-explorer-grid" style="flex:1; overflow-y:auto; min-height:0; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 14px; padding-bottom: 80px; align-content: start;">
                     <!-- Folders & Files Rendered dynamically -->
                 </div>
 
@@ -68,6 +71,7 @@ const VaultPage = {
                     accept="image/jpeg,image/png,image/gif,image/webp,image/svg+xml,image/bmp,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation,text/plain,text/html,text/css,text/javascript,text/csv,application/json,application/xml,.md,.ts,.py,.java,.c,.cpp,.h,.php,.rb,.go,.swift,.kt,.rs,.vue,.jsx,.tsx,.scss,.sass,.yaml,.yml,.toml,.sh,.sql,.txt,.csv">
                 <input type="file" accept="image/*" capture="environment" id="vault-hidden-camera-input" style="display:none;">
             </div>
+
         `;
 
         setTimeout(() => {

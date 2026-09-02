@@ -134,6 +134,33 @@ const SettingsPage = {
                         </p>
                     </div>
 
+                    <!-- Sign Out -->
+                    <button id="btn-sign-out" onclick="App.logout()" style="
+                        width: 100%;
+                        padding: 14px;
+                        border: none;
+                        border-radius: var(--radius-md);
+                        background: linear-gradient(135deg, #ef4444, #dc2626);
+                        color: #ffffff;
+                        font-size: 14px;
+                        font-weight: 700;
+                        font-family: var(--font-body);
+                        cursor: pointer;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        gap: 8px;
+                        box-shadow: 0 4px 12px rgba(239,68,68,0.3);
+                        margin-bottom: 8px;
+                    ">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:16px; height:16px;">
+                            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                            <polyline points="16 17 21 12 16 7"/>
+                            <line x1="21" y1="12" x2="9" y2="12"/>
+                        </svg>
+                        Sign Out
+                    </button>
+
                 </div>
             </div>
         `;

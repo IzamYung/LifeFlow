@@ -647,6 +647,15 @@
     overflow-x: hidden;
 }
 
+/* Vault page: fill full viewport height so sticky header + scroll grid works */
+#vault-page.page-container {
+    height: calc(100dvh - var(--bottom-nav-height, 70px) - env(safe-area-inset-bottom, 0px));
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    padding-bottom: 0;
+}
+
 .page-container.active {
     opacity: 1;
     transform: translateY(0);

@@ -64,8 +64,35 @@ const PlannerPage = {
             if (page) page.classList.add('active');
         }, 50);
 
+        // Sync tab button styles to match persisted activeTab state
+        // (HTML defaults schedule as active, but user may have been on tasks tab)
+        this._syncTabButtons(this.activeTab);
+
         // Render default active tab
         await this.renderActiveTab();
+    },
+
+    // Syncs tab button visual state without triggering a re-render
+    _syncTabButtons(tab) {
+        const btnSched = document.getElementById('tab-btn-schedule');
+        const btnTasks = document.getElementById('tab-btn-tasks');
+        if (!btnSched || !btnTasks) return;
+
+        if (tab === 'schedule') {
+            btnSched.style.background = 'var(--primary)';
+            btnSched.style.color = '#ffffff';
+            btnSched.style.boxShadow = '0 2px 8px rgba(0,0,0,0.15)';
+            btnTasks.style.background = 'transparent';
+            btnTasks.style.color = 'var(--text-secondary)';
+            btnTasks.style.boxShadow = '';
+        } else {
+            btnTasks.style.background = 'var(--primary)';
+            btnTasks.style.color = '#ffffff';
+            btnTasks.style.boxShadow = '0 2px 8px rgba(0,0,0,0.15)';
+            btnSched.style.background = 'transparent';
+            btnSched.style.color = 'var(--text-secondary)';
+            btnSched.style.boxShadow = '';
+        }
     },
 
     async setTab(tab) {
