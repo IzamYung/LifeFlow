@@ -161,23 +161,24 @@ const App = {
         if (loginScreen) loginScreen.style.display = 'flex';
         if (appContainer) appContainer.style.display = 'none';
 
-        // Pre-fill username from database for convenience
-        try {
-            const nameDb = await API.query("SELECT value_val FROM settings WHERE key_name = 'user_name'");
+        // 1. Instant Sweet-Spot: Trigger biometric prompt in ~80ms (fast & safe from browser focus block)
+        requestAnimationFrame(() => {
+            setTimeout(() => {
+                this.triggerBiometricLogin(true);
+            }, 80);
+        });
+
+        // 2. Pre-fill username asynchronously in the background without delaying biometric
+        API.query("SELECT value_val FROM settings WHERE key_name = 'user_name'").then(nameDb => {
             if (nameDb && nameDb[0]) {
                 const userInput = document.getElementById('login-username');
                 if (userInput && !userInput.value) {
                     userInput.value = nameDb[0].value_val.trim();
                 }
             }
-        } catch (e) {
+        }).catch(e => {
             console.warn("Could not pre-fill username:", e);
-        }
-
-        // Auto pop-up device fingerprint / Face ID prompt
-        setTimeout(() => {
-            this.triggerBiometricLogin(true);
-        }, 400);
+        });
     },
 
     async triggerBiometricLogin(isAuto = false) {
