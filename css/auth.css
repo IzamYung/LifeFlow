@@ -159,3 +159,12 @@
 .auth-submit-btn:active {
     transform: scale(0.98);
 }
+
+#btn-biometric-login:hover {
+    filter: brightness(1.05);
+    box-shadow: 0 6px 18px rgba(var(--primary-rgb), 0.22);
+}
+
+#btn-biometric-login:active {
+    transform: scale(0.98);
+}

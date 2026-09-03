@@ -9,7 +9,7 @@
     <!-- CSS Modules -->
     <link rel="stylesheet" href="css/main.css?v=12">
     <link rel="stylesheet" href="css/components.css?v=12">
-    <link rel="stylesheet" href="css/auth.css">
+    <link rel="stylesheet" href="css/auth.css?v=12">
     <link rel="stylesheet" href="css/dashboard.css">
     <link rel="stylesheet" href="css/finance.css">
     <link rel="stylesheet" href="css/schedule.css">
@@ -43,8 +43,48 @@
                 <span class="auth-subtitle">Your student life, organized — finance, schedules & more</span>
             </div>
 
-            <!-- Single Login Form: No signup, just profile name verification -->
-            <form id="form-auth-login" class="auth-panel active" onsubmit="event.preventDefault();">
+            <!-- Biometric Fingerprint Section -->
+            <div id="biometric-login-area" style="display: flex; flex-direction: column; align-items: center; gap: 8px;">
+                <button type="button" id="btn-biometric-login" class="ripple-container" style="
+                    width: 100%;
+                    padding: 13px 18px;
+                    border-radius: var(--radius-md);
+                    background: linear-gradient(135deg, rgba(var(--primary-rgb), 0.12), rgba(var(--secondary-rgb), 0.10));
+                    border: 1.5px solid var(--primary);
+                    color: var(--text-primary);
+                    font-size: 14px;
+                    font-weight: 700;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    gap: 10px;
+                    cursor: pointer;
+                    box-shadow: 0 4px 14px rgba(var(--primary-rgb), 0.12);
+                    transition: all var(--transition-fast);
+                ">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2.2" style="width: 22px; height: 22px; flex-shrink: 0;">
+                        <path d="M12 2a10 10 0 0 0-6.88 17.24"/>
+                        <path d="M12 6a6 6 0 0 0-4.24 10.24"/>
+                        <path d="M12 10a2 2 0 0 0-1.41 3.41"/>
+                        <path d="M12 14v8"/>
+                        <path d="M8.5 17.5a14 14 0 0 0 7 0"/>
+                        <path d="M15.5 13.5a10 10 0 0 0-7 0"/>
+                        <path d="M18.88 19.24A10 10 0 0 0 12 2"/>
+                    </svg>
+                    <span>Login with Fingerprint</span>
+                </button>
+                <div id="biometric-status-msg" style="font-size: 11.5px; font-weight: 600; color: var(--text-secondary); text-align: center; min-height: 16px;"></div>
+            </div>
+
+            <!-- Divider -->
+            <div style="display: flex; align-items: center; gap: 12px; margin: -10px 0;">
+                <div style="flex: 1; height: 1px; background: var(--border-color);"></div>
+                <span style="font-size: 11px; font-weight: 700; color: var(--text-tertiary); letter-spacing: 0.05em;">OR</span>
+                <div style="flex: 1; height: 1px; background: var(--border-color);"></div>
+            </div>
+
+            <!-- Single Login Form: Profile name verification -->
+            <form id="form-auth-login" class="auth-panel active" onsubmit="event.preventDefault();" style="display: flex; flex-direction: column; gap: 14px;">
                 <div class="input-group">
                     <label for="login-username">Profile Name</label>
                     <input type="text" id="login-username" name="username" placeholder="Enter profile name" autocomplete="off" required>
@@ -255,11 +295,11 @@
     <script src="js/pages/finance.js?v=10"></script>
     <script src="js/pages/planner.js?v=11"></script>
     <script src="js/pages/attendance.js?v=11"></script>
-    <script src="js/pages/prayer.js?v=11"></script>
+    <script src="js/pages/prayer.js?v=12"></script>
     <script src="js/pages/qibla.js?v=10"></script>
     <script src="js/pages/settings.js?v=12"></script>
     <script src="js/pages/vault.js?v=11"></script>
-    <script src="js/app.js?v=10"></script>
+    <script src="js/app.js?v=12"></script>
     <script>
         (function() {
             var KEY = 'uniflow_theme';

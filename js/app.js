@@ -151,44 +151,235 @@ const App = {
     },
 
     // -------------------------------------------------------------------------
-    // 1. SINGLE-INPUT PERSISTENT AUTHENTICATION (SQLite settings based)
+    // 1. BIOMETRIC FINGERPRINT & USERNAME AUTHENTICATION (NO AUTO-BYPASS)
     // -------------------------------------------------------------------------
     async checkAuth() {
-        const sessionStr = localStorage.getItem('uniflow_session');
         const loginScreen = document.getElementById('login-screen');
         const appContainer = document.getElementById('app-container');
 
-        if (sessionStr) {
-            try {
-                this.session = JSON.parse(sessionStr);
-                
-                // Hide login screen, display app shell
-                loginScreen.style.display = 'none';
-                appContainer.style.display = 'flex';
+        // Always show login screen on startup (No auto login bypass)
+        if (loginScreen) loginScreen.style.display = 'flex';
+        if (appContainer) appContainer.style.display = 'none';
 
-                // Initialize SPA routers, FAB, and pull-to-refresh
-                this.initRouting();
-                this.initFAB();
-                this.initPullToRefresh();
-                await this.initThemeAndPermissions();
-                
-            } catch (e) {
-                console.error('Session validation failed: ', e);
-                this.logout();
+        // Pre-fill username from database for convenience
+        try {
+            const nameDb = await API.query("SELECT value_val FROM settings WHERE key_name = 'user_name'");
+            if (nameDb && nameDb[0]) {
+                const userInput = document.getElementById('login-username');
+                if (userInput && !userInput.value) {
+                    userInput.value = nameDb[0].value_val.trim();
+                }
             }
+        } catch (e) {
+            console.warn("Could not pre-fill username:", e);
+        }
+
+        // Auto pop-up device fingerprint / Face ID prompt
+        setTimeout(() => {
+            this.triggerBiometricLogin(true);
+        }, 400);
+    },
+
+    async triggerBiometricLogin(isAuto = false) {
+        const statusEl = document.getElementById('biometric-status-msg');
+        const btn = document.getElementById('btn-biometric-login');
+
+        // Check file:// protocol restriction for WebAuthn
+        if (window.location.protocol === 'file:') {
+            if (statusEl && !isAuto) {
+                statusEl.style.color = 'var(--warning)';
+                statusEl.innerHTML = '⚠️ Browser requires HTTPS or localhost for fingerprint access.';
+            }
+            return;
+        }
+
+        if (!window.PublicKeyCredential) {
+            if (statusEl && !isAuto) {
+                statusEl.style.color = 'var(--text-secondary)';
+                statusEl.innerHTML = '⚠️ Biometric authentication not supported on this browser.';
+            }
+            return;
+        }
+
+        const credIdB64 = localStorage.getItem('uniflow_bio_cred_id');
+
+        // If not registered yet, only enroll if user manually taps button
+        if (!credIdB64) {
+            if (isAuto) {
+                if (statusEl) {
+                    statusEl.style.color = 'var(--text-secondary)';
+                    statusEl.innerHTML = '👆 Tap "Login with Fingerprint" to setup device lock, or enter name below.';
+                }
+                return;
+            }
+            await this.enrollBiometric();
+            return;
+        }
+
+        if (statusEl) {
+            statusEl.style.color = 'var(--primary)';
+            statusEl.innerHTML = '🔍 Touch fingerprint sensor on your phone...';
+        }
+
+        try {
+            const challenge = new Uint8Array(32);
+            crypto.getRandomValues(challenge);
+
+            // Convert base64 credId to Uint8Array
+            const binaryString = atob(credIdB64);
+            const bytes = new Uint8Array(binaryString.length);
+            for (let i = 0; i < binaryString.length; i++) {
+                bytes[i] = binaryString.charCodeAt(i);
+            }
+
+            const assertion = await navigator.credentials.get({
+                publicKey: {
+                    challenge: challenge,
+                    timeout: 60000,
+                    userVerification: "required",
+                    allowCredentials: [{
+                        id: bytes.buffer,
+                        type: 'public-key',
+                        transports: ['internal']
+                    }],
+                    rpId: window.location.hostname
+                }
+            });
+
+            if (assertion) {
+                if (statusEl) {
+                    statusEl.style.color = 'var(--success)';
+                    statusEl.innerHTML = '✅ Fingerprint verified! Access granted.';
+                }
+                await this.unlockApp();
+            }
+        } catch (err) {
+            console.warn("Biometric authentication cancelled or failed:", err);
+            if (statusEl) {
+                statusEl.style.color = 'var(--text-secondary)';
+                statusEl.innerHTML = '👆 Tap "Login with Fingerprint" to retry, or enter name below.';
+            }
+        }
+    },
+
+    async enrollBiometric() {
+        const statusEl = document.getElementById('biometric-status-msg');
+        if (statusEl) {
+            statusEl.style.color = 'var(--primary)';
+            statusEl.innerHTML = '🔐 Setting up fingerprint lock for UniFlow...';
+        }
+
+        try {
+            let name = 'User';
+            try {
+                const nameDb = await API.query("SELECT value_val FROM settings WHERE key_name = 'user_name'");
+                if (nameDb[0]) name = nameDb[0].value_val.trim();
+            } catch (_) {}
+
+            const challenge = new Uint8Array(32);
+            crypto.getRandomValues(challenge);
+            const userId = new TextEncoder().encode(name);
+
+            const credential = await navigator.credentials.create({
+                publicKey: {
+                    challenge: challenge,
+                    rp: {
+                        name: "UniFlow",
+                        id: window.location.hostname
+                    },
+                    user: {
+                        id: userId,
+                        name: name,
+                        displayName: name
+                    },
+                    pubKeyCredParams: [
+                        { type: "public-key", alg: -7 },   // ES256
+                        { type: "public-key", alg: -257 }  // RS256
+                    ],
+                    authenticatorSelection: {
+                        authenticatorAttachment: "platform",
+                        userVerification: "required"
+                    },
+                    timeout: 60000
+                }
+            });
+
+            if (credential) {
+                const rawId = btoa(String.fromCharCode(...new Uint8Array(credential.rawId)));
+                localStorage.setItem('uniflow_bio_cred_id', rawId);
+                localStorage.setItem('uniflow_bio_enabled', 'true');
+                if (statusEl) {
+                    statusEl.style.color = 'var(--success)';
+                    statusEl.innerHTML = '✅ Fingerprint registered! Unlocking...';
+                }
+                await this.unlockApp(name);
+            }
+        } catch (err) {
+            console.warn("Biometric enrollment cancelled:", err);
+            if (statusEl) {
+                statusEl.style.color = 'var(--text-secondary)';
+                statusEl.innerHTML = '👆 Fingerprint setup cancelled. You can enter name below.';
+            }
+        }
+    },
+
+    async unlockApp(realName, realUniv) {
+        const loginScreen = document.getElementById('login-screen');
+        const appContainer = document.getElementById('app-container');
+
+        if (!realName) {
+            try {
+                const nameDb = await API.query("SELECT value_val FROM settings WHERE key_name = 'user_name'");
+                const univDb = await API.query("SELECT value_val FROM settings WHERE key_name = 'user_university'");
+                realName = nameDb[0] ? nameDb[0].value_val.trim() : 'Alex Mercer';
+                realUniv = univDb[0] ? univDb[0].value_val.trim() : 'Pacific Tech University';
+            } catch (e) {
+                realName = 'Alex Mercer';
+                realUniv = 'Pacific Tech University';
+            }
+        }
+
+        this.session = {
+            name: realName,
+            university: realUniv
+        };
+
+        // Cache session
+        localStorage.setItem('uniflow_session', JSON.stringify(this.session));
+
+        // Reveal App Shell
+        if (loginScreen) loginScreen.style.display = 'none';
+        if (appContainer) appContainer.style.display = 'flex';
+
+        // Initialize SPA subsystems if not yet active
+        if (!this.appStarted) {
+            this.appStarted = true;
+            this.initRouting();
+            this.initFAB();
+            this.initPullToRefresh();
+            await this.initThemeAndPermissions();
         } else {
-            // Display fullscreen login page
-            loginScreen.style.display = 'flex';
-            appContainer.style.display = 'none';
+            const currentRoute = window.location.hash || '#/dashboard';
+            window.location.hash = currentRoute;
         }
     },
 
     initAuthUI() {
         const panelLogin = document.getElementById('form-auth-login');
+        const btnBio = document.getElementById('btn-biometric-login');
+
+        // Biometric Button Listener
+        if (btnBio && !btnBio.dataset.bound) {
+            btnBio.dataset.bound = 'true';
+            btnBio.addEventListener('click', () => {
+                this.triggerBiometricLogin(false);
+            });
+        }
+
         if (!panelLogin || panelLogin.dataset.bound) return;
         panelLogin.dataset.bound = 'true';
 
-        // Submit Login Form
+        // Submit Username Login Form
         panelLogin.addEventListener('submit', async (e) => {
             e.preventDefault();
             const submitBtn = panelLogin.querySelector('button[type="submit"]');
@@ -201,7 +392,7 @@ const App = {
             const inputName = document.getElementById('login-username').value.trim().toLowerCase();
 
             try {
-                // Fetch seeded profile name from Turso settings table
+                // Fetch profile name from settings table
                 const nameDb = await API.query("SELECT value_val FROM settings WHERE key_name = 'user_name'");
                 const univDb = await API.query("SELECT value_val FROM settings WHERE key_name = 'user_university'");
                 
@@ -209,21 +400,14 @@ const App = {
                 const regName = realName.toLowerCase();
                 const realUniv = univDb[0] ? univDb[0].value_val.trim() : '';
 
-                // Allow exact match or first-name match
+                // Allow exact match, first-name match, or substring (>=3 chars)
                 const isMatch = regName && ((inputName === regName) || 
                                 (regName.split(' ')[0] === inputName) || 
                                 (regName.includes(inputName) && inputName.length >= 3));
 
                 if (isMatch) {
-                    const session = {
-                        name: realName,
-                        university: realUniv
-                    };
-
-                    // Save session into localStorage (No expiration timer)
-                    localStorage.setItem('uniflow_session', JSON.stringify(session));
                     panelLogin.reset();
-                    await this.checkAuth();
+                    await this.unlockApp(realName, realUniv);
                 } else {
                     alert('Profile name not recognized. Access denied.');
                 }
