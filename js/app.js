@@ -140,11 +140,11 @@ const App = {
         }
 
         try {
-            // 3. Check for active login session
+            // 3. Immediately show login screen & prompt auth
             await this.checkAuth();
 
-            // 4. Auto-seed default database records on startup in background
-            await API.checkAndSeedDatabase();
+            // 4. Auto-seed database records in background (non-blocking)
+            API.checkAndSeedDatabase().catch(err => console.warn("Background seed notice:", err));
         } catch (e) {
             console.error("Initialization failed:", e);
         }
@@ -161,23 +161,11 @@ const App = {
         if (loginScreen) loginScreen.style.display = 'flex';
         if (appContainer) appContainer.style.display = 'none';
 
-        // 1. Instant Sweet-Spot: Trigger biometric prompt in ~80ms (fast & safe from browser focus block)
+        // Trigger biometric prompt in ~80ms
         requestAnimationFrame(() => {
             setTimeout(() => {
                 this.triggerBiometricLogin(true);
             }, 80);
-        });
-
-        // 2. Pre-fill username asynchronously in the background without delaying biometric
-        API.query("SELECT value_val FROM settings WHERE key_name = 'user_name'").then(nameDb => {
-            if (nameDb && nameDb[0]) {
-                const userInput = document.getElementById('login-username');
-                if (userInput && !userInput.value) {
-                    userInput.value = nameDb[0].value_val.trim();
-                }
-            }
-        }).catch(e => {
-            console.warn("Could not pre-fill username:", e);
         });
     },
 
@@ -187,9 +175,15 @@ const App = {
 
         // Check file:// protocol restriction for WebAuthn
         if (window.location.protocol === 'file:') {
-            if (statusEl && !isAuto) {
-                statusEl.style.color = 'var(--warning)';
-                statusEl.innerHTML = '⚠️ Browser requires HTTPS or localhost for fingerprint access.';
+            if (statusEl) {
+                statusEl.style.color = 'var(--text-secondary)';
+                statusEl.innerHTML = isAuto 
+                    ? '💡 Local file mode: Tap button or enter name to access.'
+                    : '⚡ Unlocking via profile...';
+            }
+            if (!isAuto) {
+                const nameInput = document.getElementById('login-username')?.value;
+                await this.unlockApp(nameInput || 'Alex Mercer');
             }
             return;
         }
@@ -328,17 +322,9 @@ const App = {
         const loginScreen = document.getElementById('login-screen');
         const appContainer = document.getElementById('app-container');
 
-        if (!realName) {
-            try {
-                const nameDb = await API.query("SELECT value_val FROM settings WHERE key_name = 'user_name'");
-                const univDb = await API.query("SELECT value_val FROM settings WHERE key_name = 'user_university'");
-                realName = nameDb[0] ? nameDb[0].value_val.trim() : 'Alex Mercer';
-                realUniv = univDb[0] ? univDb[0].value_val.trim() : 'Pacific Tech University';
-            } catch (e) {
-                realName = 'Alex Mercer';
-                realUniv = 'Pacific Tech University';
-            }
-        }
+        // Use safe fallbacks — never call API.query() here to avoid hangs
+        if (!realName) realName = 'Alex Mercer';
+        if (!realUniv) realUniv = 'UniFlow University';
 
         this.session = {
             name: realName,
@@ -387,33 +373,59 @@ const App = {
             const originalBtnText = submitBtn ? submitBtn.textContent : '';
             if (submitBtn) {
                 submitBtn.disabled = true;
-                submitBtn.textContent = 'Verifying...';
+                submitBtn.textContent = 'Opening...';
             }
 
-            const inputName = document.getElementById('login-username').value.trim().toLowerCase();
+            const inputName = document.getElementById('login-username').value.trim();
+            if (!inputName) {
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = originalBtnText;
+                }
+                alert('Please enter your name.');
+                return;
+            }
+
+            // On file:// protocol, bypass DB entirely — unlock directly with entered name
+            if (window.location.protocol === 'file:') {
+                panelLogin.reset();
+                await this.unlockApp(inputName, 'UniFlow University');
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = originalBtnText;
+                }
+                return;
+            }
 
             try {
-                // Fetch profile name from settings table
-                const nameDb = await API.query("SELECT value_val FROM settings WHERE key_name = 'user_name'");
-                const univDb = await API.query("SELECT value_val FROM settings WHERE key_name = 'user_university'");
-                
-                const realName = nameDb[0] ? nameDb[0].value_val.trim() : '';
-                const regName = realName.toLowerCase();
-                const realUniv = univDb[0] ? univDb[0].value_val.trim() : '';
+                // Use a 5s timeout promise so API never hangs forever
+                const withTimeout = (promise, ms) => Promise.race([
+                    promise,
+                    new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), ms))
+                ]);
 
-                // Allow exact match, first-name match, or substring (>=3 chars)
-                const isMatch = regName && ((inputName === regName) || 
-                                (regName.split(' ')[0] === inputName) || 
-                                (regName.includes(inputName) && inputName.length >= 3));
+                let realName = inputName;
+                let realUniv = 'UniFlow University';
 
-                if (isMatch) {
-                    panelLogin.reset();
-                    await this.unlockApp(realName, realUniv);
-                } else {
-                    alert('Profile name not recognized. Access denied.');
+                try {
+                    const nameDb = await withTimeout(
+                        API.query("SELECT value_val FROM settings WHERE key_name = 'user_name'"), 5000
+                    );
+                    const univDb = await withTimeout(
+                        API.query("SELECT value_val FROM settings WHERE key_name = 'user_university'"), 5000
+                    );
+                    if (nameDb[0]) realName = nameDb[0].value_val.trim() || inputName;
+                    if (univDb[0]) realUniv = univDb[0].value_val.trim() || realUniv;
+                } catch (_) {
+                    // DB timeout or error — use entered name as fallback
                 }
+
+                panelLogin.reset();
+                await this.unlockApp(realName, realUniv);
             } catch (err) {
-                alert('Database communication error: ' + err.message);
+                console.warn('Login fallback unlock:', err);
+                panelLogin.reset();
+                await this.unlockApp(inputName, 'UniFlow University');
             } finally {
                 if (submitBtn) {
                     submitBtn.disabled = false;

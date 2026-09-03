@@ -1085,14 +1085,10 @@ const VaultPage = {
         }
 
         const cameraBtn = document.getElementById('vault-camera-btn');
-        if (cameraBtn) {
+        if (cameraBtn && hiddenCameraInput) {
             cameraBtn.addEventListener('click', () => {
-                // Try desktop webcam first via getUserMedia, fallback to native file picker
-                if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-                    this.showCameraModal();
-                } else if (hiddenCameraInput) {
-                    hiddenCameraInput.click();
-                }
+                // Directly launch native device full camera app
+                hiddenCameraInput.click();
             });
         }
 
