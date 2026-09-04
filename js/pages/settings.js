@@ -46,10 +46,15 @@ const SettingsPage = {
                                         <span class="settings-subtitle">Prayer times & task reminders — even when app is closed.</span>
                                     </div>
                                 </div>
-                                <label class="switch">
-                                    <input type="checkbox" id="sett-notifications">
-                                    <span class="slider"></span>
-                                </label>
+                                <div style="display:flex; align-items:center; gap:8px;">
+                                    <button type="button" id="btn-test-notif" class="btn btn-secondary" style="padding: 6px 12px; font-size: 11px; font-weight: 700; border-radius: var(--radius-sm); white-space: nowrap;">
+                                        🔔 Test Alert
+                                    </button>
+                                    <label class="switch">
+                                        <input type="checkbox" id="sett-notifications">
+                                        <span class="slider"></span>
+                                    </label>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -191,7 +196,7 @@ const SettingsPage = {
 
             // Sync toggle checks
             document.getElementById('sett-dark-mode').checked = this.settings.dark_mode === '1';
-            document.getElementById('sett-notifications').checked = this.settings.notifications_enabled === '1';
+            document.getElementById('sett-notifications').checked = this.settings.notifications_enabled !== '0';
 
             // Sync Telegram inputs
             const teleToken = document.getElementById('sett-tele-token');
@@ -270,6 +275,26 @@ const SettingsPage = {
                 } catch (err) {
                     console.error('Failed to save theme state: ' + err.message);
                 }
+            });
+        }
+
+        // Test Notification Button Handler
+        const btnTestNotif = document.getElementById('btn-test-notif');
+        if (btnTestNotif) {
+            btnTestNotif.addEventListener('click', async () => {
+                if (window.Notification && Notification.permission !== 'granted') {
+                    try {
+                        const perm = await Notification.requestPermission();
+                        if (perm === 'granted') {
+                            const notifSwitch = document.getElementById('sett-notifications');
+                            if (notifSwitch) notifSwitch.checked = true;
+                        }
+                    } catch (_) {}
+                }
+                App.triggerSystemNotification(
+                    '🔔 UniFlow Notification Test',
+                    'Notification system is active! You will receive alerts for prayer times, upcoming classes, and assignment deadlines.'
+                );
             });
         }
 

@@ -345,9 +345,11 @@ const App = {
             this.initFAB();
             this.initPullToRefresh();
             await this.initThemeAndPermissions();
+            this.initNotificationPolling();
         } else {
             const currentRoute = window.location.hash || '#/dashboard';
             window.location.hash = currentRoute;
+            this.initNotificationPolling();
         }
     },
 
@@ -880,10 +882,18 @@ const App = {
         const poll = async () => {
             if (!this.session) return;
             try {
+                // Get local time string YYYY-MM-DD HH:MM:SS matching scheduled_time format
+                const now = new Date();
+                const localIso = new Date(now.getTime() - (now.getTimezoneOffset() * 60000))
+                    .toISOString().replace('T', ' ').slice(0, 19);
+
                 // Fetch scheduled alerts due now or in the past
-                const pending = await API.query("SELECT * FROM notifications WHERE sent = 0 AND datetime(scheduled_time) <= datetime('now', 'localtime')");
+                const pending = await API.query(
+                    "SELECT * FROM notifications WHERE sent = 0 AND scheduled_time <= ?",
+                    [localIso]
+                );
                 
-                if (pending.length > 0) {
+                if (pending && pending.length > 0) {
                     for (const notif of pending) {
                         this.triggerSystemNotification(notif.title, notif.body);
                         await API.execute("UPDATE notifications SET sent = 1 WHERE id = ?", [notif.id]);
@@ -895,12 +905,115 @@ const App = {
         };
 
         if (this.notifInterval) clearInterval(this.notifInterval);
-        poll();
-        this.notifInterval = setInterval(poll, 30000);
+        // Initial check after 1.5s, then poll every 15s
+        setTimeout(poll, 1500);
+        this.notifInterval = setInterval(poll, 15000);
+    },
+
+    playNotificationChime() {
+        try {
+            const AudioCtx = window.AudioContext || window.webkitAudioContext;
+            if (!AudioCtx) return;
+            const ctx = new AudioCtx();
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(587.33, ctx.currentTime); // D5
+            osc.frequency.setValueAtTime(880, ctx.currentTime + 0.12); // A5
+            gain.gain.setValueAtTime(0.2, ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.5);
+            osc.start();
+            osc.stop(ctx.currentTime + 0.5);
+        } catch (_) {}
+    },
+
+    showInAppNotification(title, body) {
+        let container = document.getElementById('in-app-notification-container');
+        if (!container) {
+            container = document.createElement('div');
+            container.id = 'in-app-notification-container';
+            container.style.cssText = `
+                position: fixed;
+                top: max(16px, env(safe-area-inset-top, 16px));
+                left: 50%;
+                transform: translateX(-50%);
+                z-index: 999999;
+                width: calc(100% - 32px);
+                max-width: 420px;
+                display: flex;
+                flex-direction: column;
+                gap: 10px;
+                pointer-events: none;
+            `;
+            document.body.appendChild(container);
+        }
+
+        const toast = document.createElement('div');
+        toast.style.cssText = `
+            background: rgba(18, 18, 22, 0.96);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1.5px solid var(--primary, #6366f1);
+            border-radius: 14px;
+            padding: 14px 16px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5), 0 0 20px rgba(99, 102, 241, 0.25);
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            color: #fff;
+            pointer-events: auto;
+            transform: translateY(-20px) scale(0.96);
+            opacity: 0;
+            transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+            cursor: pointer;
+        `;
+
+        toast.innerHTML = `
+            <div style="width: 36px; height: 36px; border-radius: 10px; background: rgba(99, 102, 241, 0.15); display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 18px;">
+                🔔
+            </div>
+            <div style="flex: 1; min-width: 0;">
+                <div style="font-weight: 700; font-size: 13.5px; color: #fff; line-height: 1.3; margin-bottom: 3px;">
+                    ${title || 'Notification'}
+                </div>
+                <div style="font-size: 12px; color: rgba(255, 255, 255, 0.78); line-height: 1.4; word-break: break-word;">
+                    ${body || ''}
+                </div>
+            </div>
+            <button style="background: none; border: none; color: rgba(255, 255, 255, 0.5); font-size: 18px; cursor: pointer; padding: 0 4px; line-height: 1;" title="Dismiss">&times;</button>
+        `;
+
+        const closeBtn = toast.querySelector('button');
+        const dismiss = (e) => {
+            if (e) e.stopPropagation();
+            toast.style.transform = 'translateY(-20px) scale(0.94)';
+            toast.style.opacity = '0';
+            setTimeout(() => toast.remove(), 350);
+        };
+
+        if (closeBtn) closeBtn.addEventListener('click', dismiss);
+        toast.addEventListener('click', dismiss);
+        container.appendChild(toast);
+
+        requestAnimationFrame(() => {
+            toast.style.transform = 'translateY(0) scale(1)';
+            toast.style.opacity = '1';
+        });
+
+        setTimeout(dismiss, 7000);
     },
 
     triggerSystemNotification(title, body) {
-        if (Notification.permission === 'granted') {
+        // 1. Play pleasant audio chime
+        this.playNotificationChime();
+
+        // 2. Always show animated in-app notification banner
+        this.showInAppNotification(title, body);
+
+        // 3. System / OS Push Notification if permitted
+        if (window.Notification && Notification.permission === 'granted') {
             if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
                 navigator.serviceWorker.ready.then((reg) => {
                     reg.showNotification(title, {
@@ -909,23 +1022,28 @@ const App = {
                         badge: './logo.png',
                         vibrate: [100, 50, 100]
                     });
-                }).catch((e) => {
-                    new Notification(title, { body: body });
+                }).catch(() => {
+                    try { new Notification(title, { body: body, icon: './logo.png' }); } catch (_) {}
                 });
             } else {
                 try {
-                    new Notification(title, { body: body });
+                    new Notification(title, { body: body, icon: './logo.png' });
                 } catch (e) {
                     console.warn('HTML5 Notification error: ', e);
                 }
             }
         }
 
+        // 4. Android Native Bridge if running inside Android WebView wrapper
         if (window.AndroidBridge && typeof window.AndroidBridge.showNotification === 'function') {
             window.AndroidBridge.showNotification(title, body);
         }
     }
 };
 
-// Start application
-document.addEventListener('DOMContentLoaded', () => App.init());
+// Start application safely
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => App.init());
+} else {
+    App.init();
+}
