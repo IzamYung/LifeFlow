@@ -48,7 +48,7 @@ const SettingsPage = {
                                 </div>
                                 <div style="display:flex; align-items:center; gap:8px;">
                                     <button type="button" id="btn-test-notif" class="btn btn-secondary" style="padding: 6px 12px; font-size: 11px; font-weight: 700; border-radius: var(--radius-sm); white-space: nowrap;">
-                                        🔔 Test Alert
+                                        🔔 Test Notification
                                     </button>
                                     <label class="switch">
                                         <input type="checkbox" id="sett-notifications">
@@ -288,12 +288,22 @@ const SettingsPage = {
                         if (perm === 'granted') {
                             const notifSwitch = document.getElementById('sett-notifications');
                             if (notifSwitch) notifSwitch.checked = true;
+                        } else {
+                            alert('Notification permission denied by browser. Please enable permissions in your phone/browser settings.');
+                            return;
                         }
                     } catch (_) {}
                 }
+
+                if (!window.Notification && !window.AndroidBridge) {
+                    alert('Notifications are not supported on this browser.');
+                    return;
+                }
+
+                // Triggers native phone/system notification
                 App.triggerSystemNotification(
-                    '🔔 UniFlow Notification Test',
-                    'Notification system is active! You will receive alerts for prayer times, upcoming classes, and assignment deadlines.'
+                    '🔔 UniFlow Test Notification',
+                    'Notification engine is working! Alerts for prayer times, classes, and assignments will appear here.'
                 );
             });
         }
