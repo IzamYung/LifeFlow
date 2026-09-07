@@ -161,11 +161,12 @@ const App = {
         if (loginScreen) loginScreen.style.display = 'flex';
         if (appContainer) appContainer.style.display = 'none';
 
-        // Trigger biometric prompt in ~80ms
+        // Double-rAF: wait exactly 2 paint frames before triggering biometric
+        // More adaptive than setTimeout — fast on 120Hz, safe on budget devices
         requestAnimationFrame(() => {
-            setTimeout(() => {
+            requestAnimationFrame(() => {
                 this.triggerBiometricLogin(true);
-            }, 80);
+            });
         });
     },
 
