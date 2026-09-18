@@ -16,66 +16,80 @@ const PrayerPage = {
             "SGR03": "Klang, Kuala Langat"
         },
         "Johor": {
-            "JHR01": "Johor Bahru, Kulai, Pontian",
-            "JHR02": "Kota Tinggi",
-            "JHR03": "Mersing",
-            "JHR04": "Muar, Ledang, Segamat",
-            "JHR05": "Batu Pahat",
-            "JHR06": "Kluang"
+            "JHR01": "Pulau Aur, Pulau Pemanggil",
+            "JHR02": "Johor Bahru, Kota Tinggi, Mersing, Kulai",
+            "JHR03": "Kluang, Pontian",
+            "JHR04": "Batu Pahat, Muar, Segamat, Gemas, Tangkak"
         },
         "Kedah": {
-            "KDH01": "Kota Setar, Pokok Sena, Kubang Pasu",
+            "KDH01": "Kota Setar, Kubang Pasu, Pokok Sena",
             "KDH02": "Kuala Muda, Yan, Pendang",
-            "KDH03": "Kulim, Bandar Baharu",
+            "KDH03": "Padang Terap, Sik",
             "KDH04": "Baling",
-            "KDH05": "Bandar Baharu",
+            "KDH05": "Bandar Baharu, Kulim",
             "KDH06": "Langkawi",
-            "KDH07": "Padang Terap, Sik"
+            "KDH07": "Puncak Gunung Jerai"
         },
         "Kelantan": {
-            "KTN01": "Kota Bharu, Bachok, Pasir Puteh, Tumpat, Pasir Mas",
-            "KTN02": "Kuala Krai, Gua Musang"
+            "KTN01": "Bachok, Kota Bharu, Machang, Pasir Mas, Pasir Puteh, Tanah Merah, Tumpat, Kuala Krai",
+            "KTN02": "Gua Musang, Jeli, Lojing"
         },
-        "Malacca": {
-            "MLK01": "Whole State of Malacca"
+        "Melaka": {
+            "MLK01": "Seluruh Negeri Melaka"
         },
         "Negeri Sembilan": {
-            "NSD01": "Port Dickson",
-            "NSD02": "Seremban, Jempol, Jelebu, Kuala Pilah, Rembau, Tampin"
+            "NGS01": "Tampin, Jempol",
+            "NGS02": "Jelebu, Kuala Pilah, Rembau",
+            "NGS03": "Port Dickson, Seremban"
         },
         "Pahang": {
-            "PHG01": "Bentong, Raub, Lipis",
-            "PHG02": "Temerloh, Jerantut, Maran, Bera",
-            "PHG03": "Pekan, Kuantan, Rompin",
-            "PHG04": "Cameron Highlands"
+            "PHG01": "Pulau Tioman",
+            "PHG02": "Kuantan, Pekan, Muadzam Shah",
+            "PHG03": "Jerantut, Temerloh, Maran, Bera, Chenor, Jengka",
+            "PHG04": "Bentong, Lipis, Raub",
+            "PHG05": "Cameron Highlands, Genting Highlands, Bukit Fraser"
         },
         "Perak": {
             "PRK01": "Tapah, Slim River, Tanjung Malim",
             "PRK02": "Ipoh, Batu Gajah, Kampar",
             "PRK03": "Kuala Kangsar, Sungai Siput",
             "PRK04": "Gerik, Pengkalan Hulu",
-            "PRK05": "Manjung, Perak Tengah"
+            "PRK05": "Manjung, Perak Tengah, Lumut",
+            "PRK06": "Lenggong"
         },
         "Perlis": {
-            "PLS01": "Whole State of Perlis"
+            "PLS01": "Seluruh Negeri Perlis"
         },
         "Penang": {
-            "PNG01": "Whole State of Penang"
+            "PNG01": "Seluruh Negeri Pulau Pinang"
         },
         "Sabah": {
-            "SBH01": "Kota Kinabalu, Penampang, Tuaran",
-            "SBH02": "Sandakan, Beluran",
-            "SBH03": "Tawau, Lahad Datu"
+            "SBH01": "Kota Kinabalu, Penampang, Tuaran, Putatan",
+            "SBH02": "Kudat, Kota Marudu, Pitas",
+            "SBH03": "Beaufort, Kuala Penyu, Sipitang, Tenom, Nabawan",
+            "SBH04": "Lahad Datu, Kinabatangan, Beluran",
+            "SBH05": "Keningau, Tambunan, Ranau",
+            "SBH06": "Kota Belud, Kota Kinabatangan",
+            "SBH07": "Papar, Kimanis",
+            "SBH08": "Semporna, Kunak, Tawau",
+            "SBH09": "Sandakan, Kinabatangan"
         },
         "Sarawak": {
-            "SWK01": "Kuching, Bau, Lundu",
-            "SWK02": "Sibu, Mukah",
-            "SWK03": "Miri, Marudi"
+            "SWK01": "Kuching, Bau, Lundu, Samarahan, Serian",
+            "SWK02": "Sri Aman, Lubok Antu",
+            "SWK03": "Sibu, Dalat, Mukah",
+            "SWK04": "Sarikei, Meradong",
+            "SWK05": "Kapit, Belaga, Song",
+            "SWK06": "Bintulu",
+            "SWK07": "Miri, Marudi",
+            "SWK08": "Limbang, Lawas",
+            "SWK09": "Betong, Saratok"
         },
         "Terengganu": {
             "TRG01": "Kuala Terengganu, Marang",
             "TRG02": "Kemaman, Dungun",
-            "TRG03": "Besut, Setiu"
+            "TRG03": "Besut, Setiu",
+            "TRG04": "Hulu Terengganu"
         }
     },
 
@@ -86,44 +100,59 @@ const PrayerPage = {
         'SGR01': [[3.0738, 101.5183], [2.9935, 101.7874], [2.7456, 101.7072], [3.2450, 101.6500], [3.1073, 101.6067]],
         'SGR02': [[3.3500, 101.2500], [3.6667, 100.9833]],
         'SGR03': [[3.0449, 101.4456], [2.8167, 101.5000], [2.8000, 101.6000]],
-        'JHR01': [[1.4927, 103.7414], [1.6667, 103.6000], [1.5000, 103.4000]],
-        'JHR02': [[1.7381, 103.8999], [1.5667, 104.1333]],
-        'JHR03': [[2.4312, 103.8405], [2.6000, 103.6500]],
-        'JHR04': [[2.0442, 102.5689], [2.2667, 102.5333], [2.5167, 102.8167]],
-        'JHR05': [[1.8548, 102.9325], [1.9000, 103.1333]],
-        'JHR06': [[2.0251, 103.3328], [2.1667, 103.4000]],
+        // Johor — JHR01 is Pulau Aur (remote island), JHR02 is main JB area
+        'JHR01': [[2.4667, 104.5167]],                                          // Pulau Aur
+        'JHR02': [[1.4927, 103.7414], [2.4312, 103.8405], [1.7381, 103.8999]], // JB, Kota Tinggi, Mersing, Kulai
+        'JHR03': [[1.7500, 103.3500], [1.4000, 103.4000]],                     // Kluang, Pontian
+        'JHR04': [[1.8548, 102.9325], [2.0442, 102.5689], [2.5167, 102.8167]], // Batu Pahat, Muar, Segamat
         'KDH01': [[6.1248, 100.3678], [6.1667, 100.5167], [6.4333, 100.4333]],
         'KDH02': [[5.6436, 100.4884], [5.8000, 100.3667], [5.9833, 100.4667]],
-        'KDH03': [[5.3649, 100.5618], [5.2000, 100.6000]],
+        'KDH03': [[6.2500, 100.6667], [5.8167, 100.7500]],
         'KDH04': [[5.6764, 100.9169]],
-        'KDH05': [[5.1374, 100.4939]],
+        'KDH05': [[5.1374, 100.4939], [5.3649, 100.5618]],
         'KDH06': [[6.3500, 99.8000]],
-        'KDH07': [[6.2500, 100.6667], [5.8167, 100.7500]],
+        'KDH07': [[5.7833, 100.4333]],                                          // Puncak Gunung Jerai
         'KTN01': [[6.1254, 102.2386], [6.0667, 102.4000], [5.8333, 102.4000], [6.2000, 102.1667], [6.0500, 102.1333]],
-        'KTN02': [[5.5333, 102.2000], [4.8823, 101.9686]],
+        'KTN02': [[5.5333, 102.2000], [4.8823, 101.9686], [5.7667, 101.9833]],
         'MLK01': [[2.1896, 102.2501], [2.2833, 102.1500], [2.3500, 102.4000]],
-        'NSD01': [[2.5228, 101.7959]],
-        'NSD02': [[2.7258, 101.9424], [2.8000, 102.3000], [2.9000, 102.0667], [2.7333, 102.2500], [2.5833, 102.0833], [2.4667, 102.2333]],
-        'PHG01': [[3.5221, 101.9085], [3.7833, 101.8667], [4.1833, 102.0500]],
-        'PHG02': [[3.4496, 102.4175], [3.9333, 102.3667], [3.5833, 102.7667], [3.1833, 102.5333]],
-        'PHG03': [[3.8077, 103.3260], [3.4833, 103.4000], [2.8167, 103.4833]],
-        'PHG04': [[4.4707, 101.3764]],
+        'NGS01': [[2.4667, 102.4333], [3.0500, 102.6000]],                     // Tampin, Jempol
+        'NGS02': [[2.9500, 102.0833], [2.8000, 102.3000], [2.7333, 102.2500]], // Jelebu, Kuala Pilah, Rembau
+        'NGS03': [[2.5228, 101.7959], [2.7258, 101.9424]],                     // Port Dickson, Seremban
+        'PHG01': [[2.3167, 104.3333]],                                          // Pulau Tioman
+        'PHG02': [[3.8077, 103.3260], [3.4833, 103.4000], [2.8167, 103.4833]], // Kuantan, Pekan
+        'PHG03': [[3.4496, 102.4175], [3.9333, 102.3667], [3.5833, 102.7667]], // Jerantut, Temerloh, Maran
+        'PHG04': [[3.5221, 101.9085], [3.7833, 101.8667], [4.1833, 102.0500]], // Bentong, Lipis, Raub
+        'PHG05': [[4.4707, 101.3764], [3.7167, 101.7833]],                     // Cameron Highlands, Genting
         'PRK01': [[4.2000, 101.2667], [3.8333, 101.4000], [3.6800, 101.5200]],
         'PRK02': [[4.5975, 101.0901], [4.4667, 101.0333], [4.3000, 101.1500]],
         'PRK03': [[4.7758, 100.9416], [4.8167, 101.0667]],
         'PRK04': [[5.4292, 101.1272], [5.7000, 100.9833]],
         'PRK05': [[4.2000, 100.6667], [4.3500, 100.9333], [4.0259, 101.0197]],
+        'PRK06': [[5.1000, 100.9833]],                                          // Lenggong
         'PLS01': [[6.4449, 100.1986], [6.5000, 100.2667]],
         'PNG01': [[5.4164, 100.3327], [5.3667, 100.4500], [5.3000, 100.2833]],
-        'SBH01': [[5.9804, 116.0735], [5.9167, 116.1167], [6.1833, 116.2333]],
-        'SBH02': [[5.8402, 118.1179], [5.9000, 117.5500]],
-        'SBH03': [[4.2446, 117.8912], [5.0333, 118.3333]],
-        'SWK01': [[1.5535, 110.3592], [1.4167, 110.1500], [1.6667, 109.8500]],
-        'SWK02': [[2.3000, 111.8167], [2.9000, 112.1000]],
-        'SWK03': [[4.3995, 113.9914], [4.1833, 114.3333]],
+        'SBH01': [[5.9804, 116.0735], [5.9167, 116.1167], [6.1833, 116.2333]], // KK, Penampang, Tuaran
+        'SBH02': [[6.8833, 116.8500], [6.9833, 116.7333]],                     // Kudat, Kota Marudu
+        'SBH03': [[5.3500, 115.7500], [5.0667, 115.9500]],                     // Beaufort, Sipitang, Tenom
+        'SBH04': [[5.0333, 118.3333], [5.8402, 118.1179]],                     // Lahad Datu, Beluran
+        'SBH05': [[5.7667, 116.9167], [5.9333, 116.6667]],                     // Keningau, Ranau
+        'SBH06': [[6.3500, 116.4333]],                                          // Kota Belud
+        'SBH07': [[5.7500, 115.9500]],                                          // Papar
+        'SBH08': [[4.2446, 117.8912], [4.4667, 118.5000]],                     // Semporna, Tawau
+        'SBH09': [[5.8402, 118.1179]],                                          // Sandakan
+        'SWK01': [[1.5535, 110.3592], [1.4167, 110.1500], [1.6667, 109.8500]], // Kuching, Bau, Lundu
+        'SWK02': [[1.2333, 111.4667]],                                          // Sri Aman
+        'SWK03': [[2.3000, 111.8167], [2.9000, 112.1000]],                     // Sibu, Mukah
+        'SWK04': [[2.1167, 111.8000]],                                          // Sarikei
+        'SWK05': [[2.0167, 112.9333]],                                          // Kapit
+        'SWK06': [[3.1667, 113.0333]],                                          // Bintulu
+        'SWK07': [[4.3995, 113.9914], [4.1833, 114.3333]],                     // Miri, Marudi
+        'SWK08': [[4.7333, 115.0000]],                                          // Limbang, Lawas
+        'SWK09': [[1.5500, 111.5000]],                                          // Betong, Saratok
         'TRG01': [[5.3117, 103.1324], [5.2000, 103.2000]],
         'TRG02': [[4.2333, 103.4167], [4.7667, 103.4167]],
-        'TRG03': [[5.8333, 102.5500], [5.5500, 102.7333]]
+        'TRG03': [[5.8333, 102.5500], [5.5500, 102.7333]],
+        'TRG04': [[4.9667, 102.7667]]                                           // Hulu Terengganu
     },
 
     async render(container) {
