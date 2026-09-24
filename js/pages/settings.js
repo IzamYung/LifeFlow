@@ -303,7 +303,8 @@ const SettingsPage = {
                 // Triggers native phone/system notification
                 App.triggerSystemNotification(
                     '🔔 UniFlow Test Notification',
-                    'Notification engine is working! Alerts for prayer times, classes, and assignments will appear here.'
+                    'Notification engine is working! Alerts for prayer times, classes, and assignments will appear here.',
+                    'uniflow-test-notification'
                 );
             });
         }

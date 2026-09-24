@@ -106,12 +106,14 @@ module.exports = async function handler(req, res) {
         let pushCount = 0;
 
         for (const notif of pendingNotifs) {
+            const notifTag = `uniflow-${notif.id || (notif.title + '-' + notif.scheduled_time)}`;
             const payload = JSON.stringify({
                 title: notif.title || 'UniFlow Notification',
                 body: notif.body || '',
                 icon: './logo.png',
                 badge: './logo.png',
-                data: { id: notif.id, url: './' }
+                tag: notifTag,
+                data: { id: notif.id, tag: notifTag, url: './' }
             });
 
             if (subscribers && subscribers.length > 0) {

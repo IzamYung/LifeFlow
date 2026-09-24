@@ -1,4 +1,4 @@
-const CACHE_NAME = 'uniflow-cache-v3';
+const CACHE_NAME = 'uniflow-cache-v4';
 const TURSO_URL = 'https://uniflow-razn.aws-ap-northeast-1.turso.io';
 const TURSO_TOKEN = 'eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJhIjoicnciLCJpYXQiOjE3ODI5MTQxNTYsImlkIjoiMDE5ZjFkYjQtMDMwMS03MzIzLTgwMTctZTU2ZThlYWQ4Y2RjIiwia2lkIjoiWS16TWJXcUJtTU9XVGRDWDFSaVo5MG82aGFmQVlIWV9Vb21ndjJHTjFRZyIsInJpZCI6IjU3MDdjMDY5LWRlM2UtNDhiZS1hNGI1LTY0MWU0OTMzMjU3OSJ9.tTcJ9qz6v2iFgy6Z4f-pfldcXyfbg09HIo9Dbv7TWjHjyMyMY7c4ZPfAW2dYlkIHPZ5p8BBzkVu7D20VnMnGBg';
 
@@ -105,13 +105,16 @@ async function checkAndShowNotifications() {
             });
 
             for (const notif of rows) {
-                // Show notification to user
+                const notifTag = `uniflow-${notif.id}`;
+                // Show notification to user with tag for deduplication
                 await self.registration.showNotification(notif.title || 'UniFlow Notification', {
                     body: notif.body || '',
                     icon: './logo.png',
                     badge: './logo.png',
+                    tag: notifTag,
+                    renotify: false,
                     vibrate: [100, 50, 100],
-                    data: { id: notif.id }
+                    data: { id: notif.id, tag: notifTag }
                 });
 
                 // Update notification state to sent = 1 in Turso
@@ -206,12 +209,16 @@ self.addEventListener('push', (event) => {
         }
     }
 
+    const notifTag = data.tag || (data.data && data.data.id ? `uniflow-${data.data.id}` : `uniflow-${encodeURIComponent(data.title || 'alert')}`);
+
     const options = {
         body: data.body || '',
         icon: './logo.png',
         badge: './logo.png',
+        tag: notifTag,
+        renotify: false,
         vibrate: [100, 50, 100],
-        data: data.data || { url: './' }
+        data: data.data || { url: './', tag: notifTag }
     };
 
     event.waitUntil(

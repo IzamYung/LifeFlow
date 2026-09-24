@@ -880,6 +880,8 @@ const App = {
     // 6. LOCAL BACKGROUND NOTIFICATIONS POLLING ENGINE (SQLite backed)
     // -------------------------------------------------------------------------
     initNotificationPolling() {
+        this.dispatchedNotifIds = this.dispatchedNotifIds || new Set();
+
         const poll = async () => {
             if (!this.session) return;
             try {
@@ -896,8 +898,15 @@ const App = {
                 
                 if (pending && pending.length > 0) {
                     for (const notif of pending) {
-                        this.triggerSystemNotification(notif.title, notif.body);
+                        // In-memory guard to prevent double-dispatch in case query returns before async update completes
+                        if (this.dispatchedNotifIds.has(notif.id)) continue;
+                        this.dispatchedNotifIds.add(notif.id);
+
+                        // Mark as sent in DB immediately to prevent concurrent polling duplicate
                         await API.execute("UPDATE notifications SET sent = 1 WHERE id = ?", [notif.id]);
+
+                        const notifTag = `uniflow-${notif.id}`;
+                        this.triggerSystemNotification(notif.title, notif.body, notifTag, { id: notif.id, tag: notifTag });
                     }
                 }
             } catch (err) {
@@ -910,7 +919,9 @@ const App = {
         this.notifInterval = setInterval(poll, 20000);
     },
 
-    triggerSystemNotification(title, body) {
+    triggerSystemNotification(title, body, tag = null, data = {}) {
+        const notifTag = tag || `uniflow-${encodeURIComponent(title)}`;
+
         // Strictly trigger Native Phone / OS notification (No in-website popup)
         if (window.Notification && Notification.permission === 'granted') {
             if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
@@ -919,17 +930,29 @@ const App = {
                         body: body,
                         icon: './logo.png',
                         badge: './logo.png',
+                        tag: notifTag,
+                        renotify: false,
                         vibrate: [100, 50, 100],
-                        data: { url: './' }
+                        data: { url: './', tag: notifTag, ...data }
                     });
                 }).catch(() => {
                     try {
-                        new Notification(title, { body: body, icon: './logo.png' });
+                        new Notification(title, { 
+                            body: body, 
+                            icon: './logo.png',
+                            tag: notifTag,
+                            renotify: false
+                        });
                     } catch (_) {}
                 });
             } else {
                 try {
-                    new Notification(title, { body: body, icon: './logo.png' });
+                    new Notification(title, { 
+                        body: body, 
+                        icon: './logo.png',
+                        tag: notifTag,
+                        renotify: false
+                    });
                 } catch (e) {
                     console.warn('HTML5 Notification error: ', e);
                 }
